@@ -9,10 +9,19 @@ import {
 describe("traveler motion", () => {
   it("moves along the planet while remaining on its surface", () => {
     const initial = createInitialTravelerState(5)
-    const moved = stepTraveler(initial, { forward: 1, turn: 0 }, 1, 5)
+    const movedForward = stepTraveler(initial, { forward: 1, turn: 0 }, 1, 5)
+    const movedBackward = stepTraveler(initial, { forward: -1, turn: 0 }, 1, 5)
 
-    expect(moved.position.distanceTo(new THREE.Vector3())).toBeCloseTo(5)
-    expect(moved.position.distanceTo(initial.position)).toBeGreaterThan(0.5)
+    expect(movedForward.position.distanceTo(new THREE.Vector3())).toBeCloseTo(5)
+    expect(movedForward.position.distanceTo(initial.position)).toBeGreaterThan(
+      0.5,
+    )
+    expect(
+      movedForward.position.clone().sub(initial.position).dot(initial.forward),
+    ).toBeGreaterThan(0)
+    expect(
+      movedBackward.position.clone().sub(initial.position).dot(initial.forward),
+    ).toBeLessThan(0)
   })
 
   it("turns before moving and remains finite", () => {

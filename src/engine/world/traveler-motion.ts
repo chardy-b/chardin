@@ -30,9 +30,11 @@ export function stepTraveler(
   }
 
   if (intent.forward !== 0) {
-    const right = new THREE.Vector3().crossVectors(forward, up).normalize()
+    const rotationAxis = new THREE.Vector3()
+      .crossVectors(up, forward)
+      .normalize()
     const rotation = new THREE.Quaternion().setFromAxisAngle(
-      right,
+      rotationAxis,
       (intent.forward * WALK_SPEED * deltaSeconds) / radius,
     )
     position.applyQuaternion(rotation).normalize().multiplyScalar(radius)
