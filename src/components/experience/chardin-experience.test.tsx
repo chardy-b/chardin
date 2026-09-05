@@ -34,6 +34,12 @@ describe("ChardinExperience", () => {
     expect(screen.getByLabelText("Chardin spherical world")).toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: "How to move" }))
     expect(screen.getByLabelText("Movement guide")).toHaveTextContent("W/S")
+    expect(screen.getByLabelText("Movement guide")).toHaveTextContent(
+      "Shift to run",
+    )
+    expect(screen.getByLabelText("Movement guide")).toHaveTextContent(
+      "Space to jump",
+    )
     await user.click(screen.getByRole("button", { name: "Enter Chardin" }))
     expect(controls.start).toHaveBeenCalledOnce()
   })

@@ -74,6 +74,7 @@ export function ChardinExperience() {
       {helpOpen && (
         <aside className="help-panel" aria-label="Movement guide">
           <p>Walk with W/S or ↑/↓. Turn with A/D or ←/→.</p>
+          <p>Hold Shift to run. Press Space to jump.</p>
           <p>Pause whenever you need to step away.</p>
         </aside>
       )}
