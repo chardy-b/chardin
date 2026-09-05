@@ -1,89 +1,42 @@
-# Application template
+# Chardin
 
-A neutral, maintainable starting point for personal tools, dashboards, AI applications, and prototypes. It uses Next.js App Router, TypeScript, Tailwind CSS, locally owned shadcn/ui components, Lucide icons, and Vercel-friendly defaults.
+Chardin is an original atmospheric browser world. The current foundation opens a tiny spherical grass Planet with a geometric placeholder Traveler and an accessible HTML lifecycle interface around a direct Three.js runtime.
 
 ## Requirements
 
 - Node.js 22 or newer
-- pnpm 11.24.0 (Corepack is supported)
-
-## Install and run
+- pnpm 11.24.0
+- A current browser with WebGL2 for the playable view
 
 ```sh
-corepack enable pnpm
-pnpm install
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open http://localhost:3000. The starter does not need environment variables to run.
+Open `http://localhost:3000`, choose **Enter Chardin**, then use W/S or Up/Down to walk and A/D or Left/Right to turn. The Pause control stops the rendering loop. When WebGL2 is unavailable, the page presents an accessible static explanation and retains the health link.
 
-## Scripts
-
-```sh
-pnpm dev              # Run the local development server
-pnpm build            # Create a production build
-pnpm start            # Run the production server
-pnpm format           # Format supported repository files
-pnpm format:check     # Verify formatting without writes
-pnpm lint             # Lint the repository
-pnpm typecheck        # Type-check without emitting files
-pnpm test             # Run Vitest in watch mode
-pnpm test:run         # Run unit and component tests once
-pnpm test:coverage    # Run tests with V8 text and HTML coverage reports
-pnpm test:e2e         # Run Chromium desktop and mobile browser/visual tests
-pnpm test:e2e:update  # Deliberately update Playwright screenshot baselines
-pnpm audit            # Fail on high or critical dependency vulnerabilities
-pnpm check            # Formatting, lint, types, tests, and production build
-```
-
-## Quality and security gate
-
-Pull requests run deterministic formatting, ESLint, strict TypeScript, V8 coverage-backed unit/component tests, a production build, Playwright desktop/mobile browser tests, screenshot regression tests, a high/critical dependency audit, and Gitleaks secret detection.
-
-The committed visual baselines live beside the Playwright spec. Review screenshot changes deliberately; use `pnpm test:e2e:update` only when an intended UI change requires new baselines. Playwright reports and coverage output are generated locally and excluded from version control.
-
-CodeQL runs automatically for public repositories. An eligible private repository can enable it by setting the GitHub repository variable `ENABLE_CODEQL=true`; this avoids falsely claiming private-plan Code Scanning support.
-
-## Environment variables
-
-Copy `.env.example` to `.env.local` only when a project needs optional configuration. `AI_PROVIDER_API_KEY` is server-only. Variables with `NEXT_PUBLIC_` are visible to every visitor and must contain only public data.
-
-Environment schemas are in `src/lib/env.ts`. Keep server-only modules out of Client Components.
-
-## Health check
-
-`GET /api/health` returns `200` with `{ "status": "ok" }` and disables caching. Use it for deployment checks.
-
-## UI conventions
-
-- Prefer Server Components; use Client Components only for browser APIs or interactivity.
-- Use semantic CSS variables from `src/app/globals.css`, not arbitrary colors.
-- Reuse local primitives in `src/components/ui/`.
-- Include keyboard access, visible focus, and loading, empty, error, and success states.
-- Check the UI at mobile, tablet, and desktop widths. Respect reduced-motion preferences.
-
-### Add a shadcn component
+## Quality checks
 
 ```sh
-pnpm dlx shadcn@latest add <component>
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test:run
+pnpm build
+pnpm test:e2e
 ```
 
-Review the generated local source before committing it. Do not add the entire registry.
+The health endpoint remains available at `/api/health`.
 
-## Vercel deployment
+## Architecture and provenance
 
-The repository is ready for standard Vercel Next.js deployment. Configure Vercel Authentication in the Vercel project settings; it is not configured in this source code. Add project-specific environment variables in Vercel, then use `/api/health` for a deployment check.
+- [Canonical context](docs/context.md)
+- [Direct Three.js ADR](docs/adr/0001-direct-three-runtime.md)
+- [Research and legal boundary](docs/research/messenger-runtime-notes.md)
+- [Original asset policy](docs/original-asset-policy.md)
 
-The baseline headers intentionally omit a Content Security Policy. Add a production CSP only after the project’s third-party scripts, media, and integrations are known.
+All WIL-117 visual content is original, code-generated primitive geometry. External assets require documented redistribution rights.
 
-## Intentionally excluded
+## Current limits
 
-This base template does not include:
-
-- database
-- application-level authentication
-- durable workflows
-- Three.js
-- project provisioning
-- production-specific CSP
-- analytics and monitoring vendor
+This is the WIL-117 foundation, not the finished experience. WIL-118 will replace the basic variable-step keyboard movement and camera with deterministic pole-safe locomotion. Touch/gamepad input, a final GLB Traveler, authored grass, landmarks/skyspace, postprocessing, adaptive quality, audio, analytics, and deployment to `chardin.chezchardin.com` remain deferred.
