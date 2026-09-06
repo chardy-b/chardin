@@ -1,14 +1,20 @@
 import * as THREE from "three"
 
 import type {
+  ControlIntent,
   ExperienceRuntime,
-  MovementIntent,
   TravelerState,
 } from "@/engine/contracts"
 import {
-  createInitialTravelerState,
-  stepTraveler,
-} from "@/engine/world/traveler-motion"
+  createInitialPlayerState,
+  stepPlayerMotor,
+  type PlayerMotorConfig,
+} from "@/engine/player/player-motor"
+import {
+  createThirdPersonCameraState,
+  updateThirdPersonCamera,
+} from "@/engine/camera/third-person-camera"
+import { createFixedStepLoop } from "@/engine/core/fixed-step-loop"
 
 const PLANET_RADIUS = 5
 
@@ -104,13 +110,27 @@ export function createThreeRuntime(
   traveler.add(head)
   scene.add(traveler)
 
-  const intent: MovementIntent = { forward: 0, turn: 0 }
+  const intent: ControlIntent = {
+    forward: 0,
+    turn: 0,
+    run: false,
+    jumpPressed: false,
+  }
   const keys = new Set<string>()
-  let travelerState: TravelerState = createInitialTravelerState(
-    PLANET_RADIUS + 0.03,
+  const motorConfig: PlayerMotorConfig = {
+    planetCenter: new THREE.Vector3(),
+    groundRadius: PLANET_RADIUS + 0.03,
+    walkSpeed: 1.65,
+    runSpeed: 3.3,
+    turnSpeed: 1.9,
+    jumpSpeed: 4.2,
+    gravity: 9.8,
+  }
+  let travelerState: TravelerState = createInitialPlayerState(motorConfig)
+  let cameraState = createThirdPersonCameraState(
+    travelerState,
+    motorConfig.planetCenter,
   )
-  let frameId: number | null = null
-  let previousTime = 0
   let disposed = false
 
   const updateIntent = () => {
@@ -120,6 +140,7 @@ export function createThreeRuntime(
     intent.turn =
       Number(keys.has("KeyD") || keys.has("ArrowRight")) -
       Number(keys.has("KeyA") || keys.has("ArrowLeft"))
+    intent.run = keys.has("ShiftLeft") || keys.has("ShiftRight")
   }
   const onKeyDown = (event: KeyboardEvent) => {
     if (
@@ -132,9 +153,15 @@ export function createThreeRuntime(
         "ArrowDown",
         "ArrowLeft",
         "ArrowRight",
+        "ShiftLeft",
+        "ShiftRight",
+        "Space",
       ].includes(event.code)
     ) {
       event.preventDefault()
+      if (event.code === "Space" && !keys.has("Space")) {
+        intent.jumpPressed = true
+      }
       keys.add(event.code)
       updateIntent()
     }
@@ -145,6 +172,14 @@ export function createThreeRuntime(
   }
   window.addEventListener("keydown", onKeyDown)
   window.addEventListener("keyup", onKeyUp)
+  const clearKeys = () => {
+    keys.clear()
+    intent.forward = 0
+    intent.turn = 0
+    intent.run = false
+    intent.jumpPressed = false
+  }
+  window.addEventListener("blur", clearKeys)
 
   const resize = () => {
     const width = Math.max(canvas.clientWidth, 1)
@@ -169,57 +204,47 @@ export function createThreeRuntime(
     )
     traveler.position.copy(travelerState.position)
     traveler.quaternion.setFromRotationMatrix(basis)
-    camera.position
-      .copy(travelerState.position)
-      .addScaledVector(up, 2.25)
-      .addScaledVector(travelerState.forward, -4.15)
-    camera.up.copy(up)
-    camera.lookAt(travelerState.position.clone().addScaledVector(up, 0.55))
+    cameraState = updateThirdPersonCamera(
+      cameraState,
+      travelerState,
+      motorConfig.planetCenter,
+    )
+    camera.position.copy(cameraState.position)
+    camera.up.copy(cameraState.up)
+    camera.lookAt(cameraState.target)
   }
 
-  const renderFrame = (time: number) => {
-    frameId = null
-    const delta =
-      previousTime === 0 ? 0 : Math.min((time - previousTime) / 1000, 0.05)
-    previousTime = time
-    travelerState = stepTraveler(
-      travelerState,
-      intent,
-      delta,
-      PLANET_RADIUS + 0.03,
-    )
-    placeTravelerAndCamera()
-    renderer.render(scene, camera)
-    frameId = window.requestAnimationFrame(renderFrame)
-  }
+  const loop = createFixedStepLoop({
+    fixedSeconds: 1 / 60,
+    maxFrameSeconds: 0.1,
+    maxSubSteps: 6,
+    simulate(dt) {
+      travelerState = stepPlayerMotor(travelerState, intent, motorConfig, dt)
+      intent.jumpPressed = false
+    },
+    render() {
+      placeTravelerAndCamera()
+      renderer.render(scene, camera)
+    },
+    now: () => performance.now(),
+    requestFrame: (callback) => window.requestAnimationFrame(callback),
+    cancelFrame: (id) => window.cancelAnimationFrame(id),
+  })
   placeTravelerAndCamera()
   renderer.render(scene, camera)
 
-  const stop = () => {
-    if (frameId !== null) {
-      window.cancelAnimationFrame(frameId)
-      frameId = null
-    }
-    previousTime = 0
-  }
-
   return {
-    start() {
-      if (!disposed && frameId === null)
-        frameId = window.requestAnimationFrame(renderFrame)
-    },
-    pause: stop,
-    resume() {
-      if (!disposed && frameId === null)
-        frameId = window.requestAnimationFrame(renderFrame)
-    },
+    start: () => loop.start(),
+    pause: () => loop.pause(),
+    resume: () => loop.resume(),
     dispose() {
       if (disposed) return
       disposed = true
-      stop()
+      loop.dispose()
       resizeObserver.disconnect()
       window.removeEventListener("keydown", onKeyDown)
       window.removeEventListener("keyup", onKeyUp)
+      window.removeEventListener("blur", clearKeys)
       planetGeometry.dispose()
       planetMaterial.dispose()
       grassGeometry.dispose()

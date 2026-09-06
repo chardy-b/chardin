@@ -13,7 +13,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open `http://localhost:3000`, choose **Enter Chardin**, then use W/S or Up/Down to walk and A/D or Left/Right to turn. The Pause control stops the rendering loop. When WebGL2 is unavailable, the page presents an accessible static explanation and retains the health link.
+Open `http://localhost:3000`, choose **Enter Chardin**, then use W/S or Up/Down to walk and A/D or Left/Right to turn. Hold Shift to run and press Space to jump. The Pause control stops the rendering loop. When WebGL2 is unavailable, the page presents an accessible static explanation and retains the health link.
 
 ## Quality checks
 
@@ -35,8 +35,8 @@ The health endpoint remains available at `/api/health`.
 - [Research and legal boundary](docs/research/messenger-runtime-notes.md)
 - [Original asset policy](docs/original-asset-policy.md)
 
-All WIL-117 visual content is original, code-generated primitive geometry. External assets require documented redistribution rights.
+All visual content remains original, code-generated primitive geometry. External assets require documented redistribution rights.
 
 ## Current limits
 
-This is the WIL-117 foundation, not the finished experience. WIL-118 will replace the basic variable-step keyboard movement and camera with deterministic pole-safe locomotion. Touch/gamepad input, a final GLB Traveler, authored grass, landmarks/skyspace, postprocessing, adaptive quality, audio, analytics, and deployment to `chardin.chezchardin.com` remain deferred.
+WIL-118 adds deterministic fixed-step spherical walk, turn, run, jump, landing, and a transported local-up camera to the WIL-117 foundation. Touch/gamepad input, a final GLB Traveler, authored grass, landmarks/skyspace, postprocessing, adaptive quality, audio, analytics, and deployment to `chardin.chezchardin.com` remain deferred.

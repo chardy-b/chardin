@@ -12,11 +12,22 @@ export type ExperienceState =
 export interface TravelerState {
   position: THREE.Vector3
   forward: THREE.Vector3
+  radialVelocity: number
+  grounded: boolean
+  locomotion: "idle" | "walk" | "run" | "airborne"
 }
 
-export interface MovementIntent {
+export interface ControlIntent {
   forward: number
   turn: number
+  run: boolean
+  jumpPressed: boolean
+}
+
+export interface SurfaceFrame {
+  up: THREE.Vector3
+  forward: THREE.Vector3
+  right: THREE.Vector3
 }
 
 export interface ExperienceRuntime {
