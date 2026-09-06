@@ -19,10 +19,12 @@ const config: PlayerMotorConfig = {
 }
 
 const idle: ControlIntent = {
-  forward: 0,
-  turn: 0,
+  move: { x: 0, y: 0 },
+  look: { x: 0, y: 0 },
   run: false,
   jumpPressed: false,
+  actionPressed: false,
+  pausePressed: false,
 }
 
 function stepFor(
@@ -49,9 +51,13 @@ describe("spherical player motor", () => {
 
   it("walks forward, turns, and runs faster on the surface", () => {
     const initial = createInitialPlayerState(config)
-    const walked = stepFor(initial, { ...idle, forward: 1 }, 1)
-    const ran = stepFor(initial, { ...idle, forward: 1, run: true }, 1)
-    const turned = stepFor(initial, { ...idle, turn: 1 }, 0.5)
+    const walked = stepFor(initial, { ...idle, move: { x: 0, y: 1 } }, 1)
+    const ran = stepFor(
+      initial,
+      { ...idle, move: { x: 0, y: 1 }, run: true },
+      1,
+    )
+    const turned = stepFor(initial, { ...idle, move: { x: 1, y: 0 } }, 0.5)
 
     expect(
       walked.position.clone().sub(initial.position).dot(initial.forward),
@@ -66,18 +72,18 @@ describe("spherical player motor", () => {
 
   it("produces the same fixed-step result under different render grouping", () => {
     const initial = createInitialPlayerState(config)
-    const a = stepFor(initial, { ...idle, forward: 1, turn: 0.35 }, 2)
+    const a = stepFor(initial, { ...idle, move: { x: 0.35, y: 1 } }, 2)
     let b = initial
     for (let frame = 0; frame < 60; frame += 1) {
       b = stepPlayerMotor(
         b,
-        { ...idle, forward: 1, turn: 0.35 },
+        { ...idle, move: { x: 0.35, y: 1 } },
         config,
         1 / 60,
       )
       b = stepPlayerMotor(
         b,
-        { ...idle, forward: 1, turn: 0.35 },
+        { ...idle, move: { x: 0.35, y: 1 } },
         config,
         1 / 60,
       )
@@ -114,7 +120,7 @@ describe("spherical player motor", () => {
     for (let step = 0; step < 700; step += 1) {
       state = stepPlayerMotor(
         state,
-        { ...idle, forward: 1, run: true },
+        { ...idle, move: { x: 0, y: 1 }, run: true },
         config,
         1 / 60,
       )

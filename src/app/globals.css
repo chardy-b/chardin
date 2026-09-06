@@ -55,6 +55,52 @@ canvas:focus-visible {
   width: 100%;
   height: 100%;
   display: block;
+  touch-action: none;
+}
+.touch-controls {
+  position: absolute;
+  inset: auto max(0.75rem, env(safe-area-inset-right))
+    max(0.75rem, env(safe-area-inset-bottom))
+    max(0.75rem, env(safe-area-inset-left));
+  display: none;
+  justify-content: space-between;
+  align-items: end;
+  pointer-events: none;
+}
+.touch-cluster {
+  display: flex;
+  gap: 0.5rem;
+  align-items: end;
+  pointer-events: auto;
+}
+.touch-cluster-right {
+  justify-content: end;
+  flex-wrap: wrap;
+  max-width: 13rem;
+}
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.touch-stick {
+  display: grid;
+  width: 88px;
+  height: 88px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(245, 240, 222, 0.5);
+  color: var(--ink);
+  font-size: 0.65rem;
+}
+.touch-button {
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(245, 240, 222, 0.75);
+  color: var(--ink);
 }
 .brand-lockup {
   position: absolute;
@@ -220,6 +266,17 @@ canvas:focus-visible {
   }
   .welcome-panel {
     transform: translateY(0.75rem);
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  .touch-controls {
+    display: flex;
+  }
+  .status-line {
+    bottom: calc(7rem + env(safe-area-inset-bottom));
+  }
+  .experience-actions {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

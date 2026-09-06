@@ -15,12 +15,20 @@ import {
   updateThirdPersonCamera,
 } from "@/engine/camera/third-person-camera"
 import { createFixedStepLoop } from "@/engine/core/fixed-step-loop"
+import { GamepadInput } from "@/engine/input/gamepad-input"
+import { InputManager } from "@/engine/input/input-manager"
+import { KeyboardInput } from "@/engine/input/keyboard-input"
+import { TouchInput } from "@/engine/input/touch-input"
 
 const PLANET_RADIUS = 5
 
 export function createThreeRuntime(
   canvas: HTMLCanvasElement,
   context: WebGL2RenderingContext,
+  options: {
+    touchRoot?: HTMLElement | null
+    onPauseRequested?: () => void
+  } = {},
 ): ExperienceRuntime {
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(0xb9d9d4)
@@ -110,13 +118,11 @@ export function createThreeRuntime(
   traveler.add(head)
   scene.add(traveler)
 
-  const intent: ControlIntent = {
-    forward: 0,
-    turn: 0,
-    run: false,
-    jumpPressed: false,
-  }
-  const keys = new Set<string>()
+  const input = new InputManager([
+    new KeyboardInput(window),
+    new GamepadInput(),
+    ...(options.touchRoot ? [new TouchInput(options.touchRoot)] : []),
+  ])
   const motorConfig: PlayerMotorConfig = {
     planetCenter: new THREE.Vector3(),
     groundRadius: PLANET_RADIUS + 0.03,
@@ -132,54 +138,6 @@ export function createThreeRuntime(
     motorConfig.planetCenter,
   )
   let disposed = false
-
-  const updateIntent = () => {
-    intent.forward =
-      Number(keys.has("KeyW") || keys.has("ArrowUp")) -
-      Number(keys.has("KeyS") || keys.has("ArrowDown"))
-    intent.turn =
-      Number(keys.has("KeyD") || keys.has("ArrowRight")) -
-      Number(keys.has("KeyA") || keys.has("ArrowLeft"))
-    intent.run = keys.has("ShiftLeft") || keys.has("ShiftRight")
-  }
-  const onKeyDown = (event: KeyboardEvent) => {
-    if (
-      [
-        "KeyW",
-        "KeyA",
-        "KeyS",
-        "KeyD",
-        "ArrowUp",
-        "ArrowDown",
-        "ArrowLeft",
-        "ArrowRight",
-        "ShiftLeft",
-        "ShiftRight",
-        "Space",
-      ].includes(event.code)
-    ) {
-      event.preventDefault()
-      if (event.code === "Space" && !keys.has("Space")) {
-        intent.jumpPressed = true
-      }
-      keys.add(event.code)
-      updateIntent()
-    }
-  }
-  const onKeyUp = (event: KeyboardEvent) => {
-    keys.delete(event.code)
-    updateIntent()
-  }
-  window.addEventListener("keydown", onKeyDown)
-  window.addEventListener("keyup", onKeyUp)
-  const clearKeys = () => {
-    keys.clear()
-    intent.forward = 0
-    intent.turn = 0
-    intent.run = false
-    intent.jumpPressed = false
-  }
-  window.addEventListener("blur", clearKeys)
 
   const resize = () => {
     const width = Math.max(canvas.clientWidth, 1)
@@ -219,8 +177,13 @@ export function createThreeRuntime(
     maxFrameSeconds: 0.1,
     maxSubSteps: 6,
     simulate(dt) {
+      const intent: ControlIntent = input.sample()
+      if (intent.pausePressed) {
+        input.pause()
+        options.onPauseRequested?.()
+        return
+      }
       travelerState = stepPlayerMotor(travelerState, intent, motorConfig, dt)
-      intent.jumpPressed = false
     },
     render() {
       placeTravelerAndCamera()
@@ -235,16 +198,17 @@ export function createThreeRuntime(
 
   return {
     start: () => loop.start(),
-    pause: () => loop.pause(),
+    pause: () => {
+      input.pause()
+      loop.pause()
+    },
     resume: () => loop.resume(),
     dispose() {
       if (disposed) return
       disposed = true
       loop.dispose()
       resizeObserver.disconnect()
-      window.removeEventListener("keydown", onKeyDown)
-      window.removeEventListener("keyup", onKeyUp)
-      window.removeEventListener("blur", clearKeys)
+      input.dispose()
       planetGeometry.dispose()
       planetMaterial.dispose()
       grassGeometry.dispose()

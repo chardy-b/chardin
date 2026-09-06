@@ -10,7 +10,7 @@ This vocabulary is canonical for the Chardin runtime.
 | Actor             | A simulated entity positioned and oriented relative to a Surface frame.                           | Equating every Actor with the player.         |
 | Traveler          | The player-controlled Actor and its simulation state.                                             | Coupling movement to visual model nodes.      |
 | Character asset   | A replaceable visual presentation for a Traveler, eventually a GLB and animation contract.        | Calling model geometry the Traveler.          |
-| Control intent    | Device-independent movement and action values for one simulation step.                            | Reading DOM events inside simulation code.    |
+| Control intent    | Normalized move/look vectors plus held run and edge-triggered jump, action, and pause values.     | Reading DOM events inside simulation code.    |
 | Motor             | A pure movement state transition using Control intent, Planet geometry, and elapsed time.         | Including camera or rendering logic.          |
 | Camera rig        | Camera state that follows the Traveler relative to the Planet.                                    | Fixed-world-up camera logic.                  |
 | Landmark          | Authored content anchored by a position and tangent frame on the Planet.                          | Parenting landmarks to the Traveler.          |
