@@ -11,6 +11,7 @@ import {
   type PlayerMotorConfig,
 } from "@/engine/player/player-motor"
 import {
+  applyCameraLook,
   createThirdPersonCameraState,
   updateThirdPersonCamera,
 } from "@/engine/camera/third-person-camera"
@@ -138,6 +139,19 @@ export function createThreeRuntime(
     motorConfig.planetCenter,
   )
   let disposed = false
+  let frameIntent: ControlIntent = {
+    move: { x: 0, y: 0 },
+    look: { x: 0, y: 0 },
+    run: false,
+    jumpPressed: false,
+    actionPressed: false,
+    pausePressed: false,
+  }
+  let pendingEdges = {
+    jumpPressed: false,
+    actionPressed: false,
+    pausePressed: false,
+  }
 
   const resize = () => {
     const width = Math.max(canvas.clientWidth, 1)
@@ -176,14 +190,31 @@ export function createThreeRuntime(
     fixedSeconds: 1 / 60,
     maxFrameSeconds: 0.1,
     maxSubSteps: 6,
+    beforeFrame() {
+      frameIntent = input.sample()
+      pendingEdges.jumpPressed ||= frameIntent.jumpPressed
+      pendingEdges.actionPressed ||= frameIntent.actionPressed
+      pendingEdges.pausePressed ||= frameIntent.pausePressed
+    },
     simulate(dt) {
-      const intent: ControlIntent = input.sample()
+      const intent: ControlIntent = { ...frameIntent, ...pendingEdges }
       if (intent.pausePressed) {
+        pendingEdges = {
+          jumpPressed: false,
+          actionPressed: false,
+          pausePressed: false,
+        }
         input.pause()
         options.onPauseRequested?.()
         return
       }
       travelerState = stepPlayerMotor(travelerState, intent, motorConfig, dt)
+      cameraState = applyCameraLook(cameraState, intent.look, dt)
+      pendingEdges = {
+        jumpPressed: false,
+        actionPressed: false,
+        pausePressed: false,
+      }
     },
     render() {
       placeTravelerAndCamera()

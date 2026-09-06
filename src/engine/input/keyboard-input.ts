@@ -14,10 +14,28 @@ const HANDLED_CODES = new Set([
   "Space",
   "KeyE",
   "Escape",
+  "KeyI",
+  "KeyJ",
+  "KeyK",
+  "KeyL",
 ])
+
+const EDGE_CODES = new Set(["Space", "KeyE", "Escape"])
+
+function isInteractiveTarget(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(
+      target.closest(
+        "button, a, input, textarea, select, [role='button'], [contenteditable]:not([contenteditable='false'])",
+      ),
+    )
+  )
+}
 
 export class KeyboardInput implements InputAdapter {
   private readonly keys = new Set<string>()
+  private readonly pressedEdges = new Set<string>()
   private disposed = false
 
   constructor(private readonly target: Window) {
@@ -27,18 +45,26 @@ export class KeyboardInput implements InputAdapter {
 
   private onKeyDown = (event: KeyboardEvent) => {
     if (!HANDLED_CODES.has(event.code)) return
+    if (isInteractiveTarget(event.target)) return
     event.preventDefault()
+    if (!event.repeat && EDGE_CODES.has(event.code))
+      this.pressedEdges.add(event.code)
     this.keys.add(event.code)
   }
 
   private onKeyUp = (event: KeyboardEvent) => {
     if (!HANDLED_CODES.has(event.code)) return
+    if (isInteractiveTarget(event.target)) {
+      this.keys.delete(event.code)
+      return
+    }
     event.preventDefault()
     this.keys.delete(event.code)
   }
 
   sample(): PartialControlIntent {
-    if (this.disposed || this.keys.size === 0) return {}
+    if (this.disposed || (this.keys.size === 0 && this.pressedEdges.size === 0))
+      return {}
     const x =
       Number(this.keys.has("KeyD") || this.keys.has("ArrowRight")) -
       Number(this.keys.has("KeyA") || this.keys.has("ArrowLeft"))
@@ -46,17 +72,24 @@ export class KeyboardInput implements InputAdapter {
       Number(this.keys.has("KeyW") || this.keys.has("ArrowUp")) -
       Number(this.keys.has("KeyS") || this.keys.has("ArrowDown"))
     const length = Math.max(1, Math.hypot(x, y))
-    return {
+    const lookX = Number(this.keys.has("KeyL")) - Number(this.keys.has("KeyJ"))
+    const lookY = Number(this.keys.has("KeyI")) - Number(this.keys.has("KeyK"))
+    const lookLength = Math.max(1, Math.hypot(lookX, lookY))
+    const state = {
       move: { x: x / length, y: y / length },
+      look: { x: lookX / lookLength, y: lookY / lookLength },
       run: this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"),
-      jump: this.keys.has("Space"),
-      action: this.keys.has("KeyE"),
-      pause: this.keys.has("Escape"),
+      jump: this.keys.has("Space") || this.pressedEdges.has("Space"),
+      action: this.keys.has("KeyE") || this.pressedEdges.has("KeyE"),
+      pause: this.keys.has("Escape") || this.pressedEdges.has("Escape"),
     }
+    this.pressedEdges.clear()
+    return state
   }
 
   clear() {
     this.keys.clear()
+    this.pressedEdges.clear()
   }
 
   dispose() {

@@ -8,14 +8,13 @@ describe("TouchControls", () => {
   it("provides semantic 44px control targets and normalized two-thumb input", () => {
     const { container } = render(<TouchControls />)
     const root = screen.getByLabelText("Touch controls")
+    expect(root).toHaveAttribute("role", "group")
     const move = screen.getByLabelText("Move traveler")
     const look = screen.getByLabelText("Look around")
     const jump = screen.getByRole("button", { name: "Jump" })
     const input = new TouchInput(root)
 
-    for (const control of container.querySelectorAll(
-      "button, [role='group']",
-    )) {
+    for (const control of container.querySelectorAll("button, .touch-stick")) {
       expect(control).toHaveClass("touch-target")
     }
 
@@ -25,24 +24,27 @@ describe("TouchControls", () => {
     Object.defineProperty(look, "getBoundingClientRect", {
       value: () => ({ left: 100, top: 0, width: 100, height: 100 }),
     })
-    const capture = vi.fn()
-    Object.defineProperty(move, "setPointerCapture", { value: capture })
+    const moveCapture = vi.fn()
+    Object.defineProperty(move, "setPointerCapture", { value: moveCapture })
     fireEvent.pointerDown(move, { pointerId: 7, clientX: 50, clientY: 50 })
     fireEvent.pointerMove(move, { pointerId: 7, clientX: 100, clientY: 0 })
-    expect(capture).toHaveBeenCalledWith(7)
+    expect(moveCapture).toHaveBeenCalledWith(7)
     expect(input.sample().move).toEqual({
       x: 1 / Math.sqrt(2),
       y: 1 / Math.sqrt(2),
     })
 
-    Object.defineProperty(look, "setPointerCapture", { value: capture })
+    const lookCapture = vi.fn()
+    Object.defineProperty(look, "setPointerCapture", { value: lookCapture })
     fireEvent.pointerDown(look, { pointerId: 8, clientX: 150, clientY: 50 })
     fireEvent.pointerMove(look, { pointerId: 8, clientX: 175, clientY: 75 })
+    expect(lookCapture).toHaveBeenCalledWith(8)
     expect(input.sample().look).toEqual({ x: 0.5, y: -0.5 })
 
     fireEvent.pointerDown(jump, { pointerId: 9 })
-    expect(input.sample().jump).toBe(true)
     fireEvent.pointerUp(jump, { pointerId: 9 })
+    expect(input.sample().jump).toBe(true)
+    expect(input.sample().jump).toBe(false)
     fireEvent.pointerCancel(move, { pointerId: 7 })
     fireEvent.lostPointerCapture(look, { pointerId: 8 })
     expect(input.sample()).toMatchObject({

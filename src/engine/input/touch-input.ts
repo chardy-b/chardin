@@ -4,6 +4,7 @@ type VectorName = "move" | "look"
 
 export class TouchInput implements InputAdapter {
   private state: PartialControlIntent = {}
+  private readonly pressedEdges = new Set<string>()
   private readonly pointers = new Map<
     number,
     { kind: string; target: HTMLElement }
@@ -40,6 +41,8 @@ export class TouchInput implements InputAdapter {
       kind === "pause"
     )
       this.state[kind] = true
+    if (kind === "jump" || kind === "action" || kind === "pause")
+      this.pressedEdges.add(kind)
   }
 
   private onPointerMove = (event: PointerEvent) => {
@@ -79,10 +82,18 @@ export class TouchInput implements InputAdapter {
   }
 
   sample() {
-    return this.disposed ? {} : { ...this.state }
+    if (this.disposed) return {}
+    const state = { ...this.state }
+    for (const kind of this.pressedEdges) {
+      if (kind === "jump" || kind === "action" || kind === "pause")
+        state[kind] = true
+    }
+    this.pressedEdges.clear()
+    return state
   }
   clear() {
     this.pointers.clear()
+    this.pressedEdges.clear()
     this.state = {}
   }
   dispose() {

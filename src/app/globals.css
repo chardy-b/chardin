@@ -137,6 +137,7 @@ canvas:focus-visible {
   gap: 0.55rem;
 }
 .experience-actions button,
+.pause-actions button,
 .enter-button {
   min-height: 44px;
   border: 1px solid var(--line);
@@ -148,8 +149,17 @@ canvas:focus-visible {
   backdrop-filter: blur(8px);
 }
 .experience-actions button:hover,
+.pause-actions button:hover,
 .enter-button:hover {
   background: var(--paper);
+}
+.pause-actions {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+.pause-actions .enter-button {
+  margin-top: 0;
 }
 .lifecycle {
   position: absolute;
@@ -276,7 +286,9 @@ canvas:focus-visible {
     bottom: calc(7rem + env(safe-area-inset-bottom));
   }
   .experience-actions {
-    display: none;
+    top: max(0.75rem, env(safe-area-inset-top));
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: auto;
   }
 }
 @media (prefers-reduced-motion: reduce) {

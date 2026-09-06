@@ -65,11 +65,6 @@ export function ChardinExperience() {
             Pause
           </button>
         )}
-        {state.status === "paused" && (
-          <button type="button" onClick={resume}>
-            Resume
-          </button>
-        )}
         <button
           type="button"
           onClick={() => setHelpOpen((open) => !open)}
@@ -82,6 +77,7 @@ export function ChardinExperience() {
         <aside className="help-panel" aria-label="Movement guide">
           <p>Walk with W/S or ↑/↓. Turn with A/D or ←/→.</p>
           <p>Hold Shift to run. Press Space to jump and E to act.</p>
+          <p>Look around with I/J/K/L.</p>
           <p>
             On touch, use the two pads and action buttons. Standard gamepads are
             supported.
@@ -111,6 +107,11 @@ export function ChardinExperience() {
           <section className="pause-panel">
             <p className="eyebrow">The world is resting</p>
             <h2>Paused</h2>
+            <div className="pause-actions">
+              <button type="button" className="enter-button" onClick={resume}>
+                Resume
+              </button>
+            </div>
           </section>
         )}
         {failure && (

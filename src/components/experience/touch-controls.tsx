@@ -3,7 +3,12 @@ import { forwardRef } from "react"
 export const TouchControls = forwardRef<HTMLDivElement>(
   function TouchControls(_, ref) {
     return (
-      <div ref={ref} className="touch-controls" aria-label="Touch controls">
+      <div
+        ref={ref}
+        className="touch-controls"
+        role="group"
+        aria-label="Touch controls"
+      >
         <div className="touch-cluster touch-cluster-left">
           <div
             className="touch-stick touch-target"

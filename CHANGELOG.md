@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Repair cross-device pause, camera look, keyboard accessibility, and mobile help behavior with stronger regression coverage.
+
 ### Added
 
 - Chardin branding and original spherical world foundation.

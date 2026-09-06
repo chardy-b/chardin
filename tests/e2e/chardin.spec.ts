@@ -1,5 +1,17 @@
 import { expect, test } from "@playwright/test"
 
+function intersects(
+  first: { x: number; y: number; width: number; height: number },
+  second: { x: number; y: number; width: number; height: number },
+) {
+  return !(
+    first.x + first.width <= second.x ||
+    second.x + second.width <= first.x ||
+    first.y + first.height <= second.y ||
+    second.y + second.height <= first.y
+  )
+}
+
 test.describe("Chardin world", () => {
   test("desktop starts, moves, pauses, and resumes the real WebGL world", async ({
     page,
@@ -14,18 +26,35 @@ test.describe("Chardin world", () => {
     ).toBeVisible()
     await page.getByRole("button", { name: "Enter Chardin" }).click()
     await expect(page.locator(".status-line")).toContainText("running")
+    const canvas = page.locator("canvas")
+    const beforeMovement = await canvas.screenshot()
     await page.keyboard.down("ShiftLeft")
     await page.keyboard.down("KeyW")
-    await page.waitForTimeout(10_000)
+    await page.waitForTimeout(800)
     await page.keyboard.up("KeyW")
     await page.keyboard.up("ShiftLeft")
-    await page.keyboard.press("Space")
-    await page.waitForTimeout(1_000)
+    const afterMovement = await canvas.screenshot()
+    expect(afterMovement.equals(beforeMovement)).toBe(false)
+
     await page.keyboard.press("Escape")
     await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible()
+    const paused = await canvas.screenshot()
+    await page.keyboard.down("KeyW")
+    await page.waitForTimeout(500)
+    await page.keyboard.up("KeyW")
+    expect((await canvas.screenshot()).equals(paused)).toBe(true)
     await page.getByRole("button", { name: "Resume" }).click()
     await expect(page.locator(".status-line")).toContainText("running")
-    await expect(page.locator("canvas")).toBeVisible()
+    const guide = page.getByRole("button", { name: "How to move" })
+    await guide.focus()
+    await page.keyboard.press("Space")
+    await expect(page.getByLabel("Movement guide")).toBeVisible()
+    await page.getByRole("button", { name: "Close guide" }).click()
+    await page.keyboard.down("KeyW")
+    await page.waitForTimeout(300)
+    await page.keyboard.up("KeyW")
+    expect((await canvas.screenshot()).equals(paused)).toBe(false)
+    await expect(canvas).toBeVisible()
     expect(errors).toEqual([])
     if (process.env.CHARDIN_EVIDENCE_DIR) {
       await page.screenshot({
@@ -52,10 +81,24 @@ test.describe("Chardin world", () => {
     ).toBeVisible()
     await page.getByRole("button", { name: "Enter Chardin" }).click()
     await expect(page.getByLabel("Touch controls")).toBeVisible()
+    const canvas = page.locator("canvas")
+    const guide = page.getByRole("button", { name: "How to move" })
+    const guideBounds = await guide.boundingBox()
+    expect(guideBounds).not.toBeNull()
+    for (const target of await page.locator(".touch-target").all()) {
+      const targetBounds = await target.boundingBox()
+      expect(targetBounds).not.toBeNull()
+      expect(intersects(guideBounds!, targetBounds!)).toBe(false)
+    }
+    await guide.tap()
+    await expect(page.getByLabel("Movement guide")).toBeVisible()
+    await page.getByRole("button", { name: "Close guide" }).tap()
+
     const move = page.getByLabel("Move traveler")
     const bounds = await move.boundingBox()
     expect(bounds).not.toBeNull()
     const cdp = await page.context().newCDPSession(page)
+    const beforeMovement = await canvas.screenshot()
     await cdp.send("Input.dispatchTouchEvent", {
       type: "touchStart",
       touchPoints: [
@@ -69,27 +112,42 @@ test.describe("Chardin world", () => {
       type: "touchMove",
       touchPoints: [{ x: bounds!.x + bounds!.width / 2, y: bounds!.y }],
     })
+    await page.waitForTimeout(600)
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    })
+    const afterMovement = await canvas.screenshot()
+    expect(afterMovement.equals(beforeMovement)).toBe(false)
+
+    const look = page.getByLabel("Look around")
+    const lookBounds = await look.boundingBox()
+    expect(lookBounds).not.toBeNull()
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [
+        {
+          x: lookBounds!.x + lookBounds!.width / 2,
+          y: lookBounds!.y + lookBounds!.height / 2,
+        },
+      ],
+    })
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        {
+          x: lookBounds!.x + lookBounds!.width * 0.9,
+          y: lookBounds!.y + lookBounds!.height / 2,
+        },
+      ],
+    })
     await page.waitForTimeout(500)
     await cdp.send("Input.dispatchTouchEvent", {
       type: "touchEnd",
       touchPoints: [],
     })
-    const jump = page.getByRole("button", { name: "Jump" })
-    const jumpBounds = await jump.boundingBox()
-    await cdp.send("Input.dispatchTouchEvent", {
-      type: "touchStart",
-      touchPoints: [
-        {
-          x: jumpBounds!.x + jumpBounds!.width / 2,
-          y: jumpBounds!.y + jumpBounds!.height / 2,
-        },
-      ],
-    })
-    await page.waitForTimeout(100)
-    await cdp.send("Input.dispatchTouchEvent", {
-      type: "touchEnd",
-      touchPoints: [],
-    })
+    const afterLook = await canvas.screenshot()
+    expect(afterLook.equals(afterMovement)).toBe(false)
     if (process.env.CHARDIN_EVIDENCE_DIR) {
       await page.screenshot({
         path: `${process.env.CHARDIN_EVIDENCE_DIR}/mobile-touch-running.png`,
@@ -99,13 +157,14 @@ test.describe("Chardin world", () => {
     const touchPause = page
       .getByLabel("Touch controls")
       .getByRole("button", { name: "Pause" })
-    await touchPause.dispatchEvent("pointerdown", {
-      pointerId: 23,
-      pointerType: "touch",
-    })
-    await page.waitForTimeout(100)
-    expect(errors).toEqual([])
+    await touchPause.tap()
     await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible()
+    const paused = await canvas.screenshot()
+    await page.waitForTimeout(400)
+    expect((await canvas.screenshot()).equals(paused)).toBe(true)
+    await page.getByRole("button", { name: "Resume" }).tap()
+    await expect(page.locator(".status-line")).toContainText("running")
+    expect(errors).toEqual([])
     const shell = await page.locator("main").boundingBox()
     expect(shell?.height).toBeGreaterThanOrEqual(
       page.viewportSize()?.height ?? 0,

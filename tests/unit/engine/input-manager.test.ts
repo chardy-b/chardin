@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { GamepadInput } from "@/engine/input/gamepad-input"
 import { InputManager } from "@/engine/input/input-manager"
@@ -34,6 +34,13 @@ function gamepad(overrides: Partial<Gamepad> = {}): MutableGamepad {
 }
 
 describe("InputManager", () => {
+  const originalHidden = Object.getOwnPropertyDescriptor(document, "hidden")
+
+  afterEach(() => {
+    if (originalHidden)
+      Object.defineProperty(document, "hidden", originalHidden)
+    else Reflect.deleteProperty(document, "hidden")
+  })
   it("clamps vectors, chooses the greatest magnitude, ORs held controls, and consumes edges once", () => {
     const weak = adapter({
       move: { x: 0.2, y: 0.2 },
@@ -95,7 +102,7 @@ describe("InputManager", () => {
 })
 
 describe("KeyboardInput", () => {
-  it("normalizes WASD/arrows and held/edge-capable standard actions", () => {
+  it("normalizes movement/look and latches short action taps once", () => {
     const keyboard = new KeyboardInput(window)
     window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }))
     window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyD" }))
@@ -103,9 +110,12 @@ describe("KeyboardInput", () => {
     window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }))
     window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyE" }))
     window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }))
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyI" }))
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyL" }))
 
     expect(keyboard.sample()).toEqual({
       move: { x: 1 / Math.sqrt(2), y: 1 / Math.sqrt(2) },
+      look: { x: 1 / Math.sqrt(2), y: 1 / Math.sqrt(2) },
       run: true,
       jump: true,
       action: true,
@@ -114,9 +124,37 @@ describe("KeyboardInput", () => {
 
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyW" }))
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyD" }))
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "Escape" }))
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }))
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "Escape" }))
+    expect(keyboard.sample()).toMatchObject({ pause: true })
+    expect(keyboard.sample()).toMatchObject({ pause: false })
     keyboard.clear()
     expect(keyboard.sample()).toEqual({})
     keyboard.dispose()
+  })
+
+  it("does not handle gameplay keys originating in interactive elements", () => {
+    const keyboard = new KeyboardInput(window)
+    const button = document.createElement("button")
+    const input = document.createElement("input")
+    document.body.append(button, input)
+
+    const space = new KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      code: "Space",
+    })
+    button.dispatchEvent(space)
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true, code: "KeyW" }),
+    )
+
+    expect(space.defaultPrevented).toBe(false)
+    expect(keyboard.sample()).toEqual({})
+    keyboard.dispose()
+    button.remove()
+    input.remove()
   })
 })
 
@@ -130,6 +168,8 @@ describe("GamepadInput", () => {
       getGamepads: () => pads,
     })
   })
+
+  afterEach(() => vi.unstubAllGlobals())
 
   it("applies radial dead zones and maps standard axes/buttons", () => {
     const pad = gamepad({ axes: [0.1, -0.1, 0.8, -0.6] })
