@@ -7,6 +7,7 @@ import { createThreeRuntime } from "@/engine/three-runtime"
 
 interface CreateExperienceOptions {
   canvas: HTMLCanvasElement
+  touchRoot?: HTMLElement | null
   onState(state: ExperienceState): void
   getWebGL2Context?: (
     canvas: HTMLCanvasElement,
@@ -14,11 +15,13 @@ interface CreateExperienceOptions {
   createRuntime?: (
     canvas: HTMLCanvasElement,
     context: WebGL2RenderingContext,
+    options?: { touchRoot?: HTMLElement | null; onPauseRequested?: () => void },
   ) => ExperienceRuntime
 }
 
 export function createExperience({
   canvas,
+  touchRoot,
   onState,
   getWebGL2Context = (target) => target.getContext("webgl2"),
   createRuntime = createThreeRuntime,
@@ -31,6 +34,11 @@ export function createExperience({
     lifecycle = state.status
     onState(state)
   }
+  const pauseRuntime = () => {
+    if (!runtime || lifecycle !== "running" || disposed) return
+    runtime.pause()
+    publish({ status: "paused" })
+  }
 
   publish({ status: "checking" })
   const context = getWebGL2Context(canvas)
@@ -39,7 +47,10 @@ export function createExperience({
   } else {
     publish({ status: "loading", progress: 0 })
     try {
-      runtime = createRuntime(canvas, context)
+      runtime = createRuntime(canvas, context, {
+        touchRoot,
+        onPauseRequested: pauseRuntime,
+      })
       publish({ status: "ready" })
     } catch {
       runtime = null
@@ -47,7 +58,7 @@ export function createExperience({
     }
   }
 
-  return {
+  const experience: Experience = {
     start() {
       if (!runtime || disposed) return false
       runtime.start()
@@ -55,9 +66,7 @@ export function createExperience({
       return true
     },
     pause() {
-      if (!runtime || lifecycle !== "running" || disposed) return
-      runtime.pause()
-      publish({ status: "paused" })
+      pauseRuntime()
     },
     resume() {
       if (!runtime || lifecycle !== "paused" || disposed) return
@@ -72,4 +81,5 @@ export function createExperience({
       publish({ status: "disposed" })
     },
   }
+  return experience
 }

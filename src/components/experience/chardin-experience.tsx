@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from "react"
 
 import type { Experience, ExperienceState } from "@/engine/contracts"
 import { createExperience } from "@/engine/create-experience"
+import { TouchControls } from "@/components/experience/touch-controls"
 
 export function ChardinExperience() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const touchRef = useRef<HTMLDivElement>(null)
   const experienceRef = useRef<Experience | null>(null)
   const [state, setState] = useState<ExperienceState>({ status: "checking" })
   const [helpOpen, setHelpOpen] = useState(false)
@@ -14,7 +16,11 @@ export function ChardinExperience() {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const experience = createExperience({ canvas, onState: setState })
+    const experience = createExperience({
+      canvas,
+      touchRoot: touchRef.current,
+      onState: setState,
+    })
     experienceRef.current = experience
     const onVisibilityChange = () => {
       if (document.hidden) experience.pause()
@@ -45,6 +51,7 @@ export function ChardinExperience() {
         aria-label="Chardin spherical world"
         tabIndex={0}
       />
+      <TouchControls ref={touchRef} />
       <header className="brand-lockup">
         <span className="brand-mark" aria-hidden="true" />
         <div>
@@ -58,11 +65,6 @@ export function ChardinExperience() {
             Pause
           </button>
         )}
-        {state.status === "paused" && (
-          <button type="button" onClick={resume}>
-            Resume
-          </button>
-        )}
         <button
           type="button"
           onClick={() => setHelpOpen((open) => !open)}
@@ -74,7 +76,12 @@ export function ChardinExperience() {
       {helpOpen && (
         <aside className="help-panel" aria-label="Movement guide">
           <p>Walk with W/S or ↑/↓. Turn with A/D or ←/→.</p>
-          <p>Hold Shift to run. Press Space to jump.</p>
+          <p>Hold Shift to run. Press Space to jump and E to act.</p>
+          <p>Look around with I/J/K/L.</p>
+          <p>
+            On touch, use the two pads and action buttons. Standard gamepads are
+            supported.
+          </p>
           <p>Pause whenever you need to step away.</p>
         </aside>
       )}
@@ -100,6 +107,11 @@ export function ChardinExperience() {
           <section className="pause-panel">
             <p className="eyebrow">The world is resting</p>
             <h2>Paused</h2>
+            <div className="pause-actions">
+              <button type="button" className="enter-button" onClick={resume}>
+                Resume
+              </button>
+            </div>
           </section>
         )}
         {failure && (

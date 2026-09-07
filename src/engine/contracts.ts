@@ -18,10 +18,12 @@ export interface TravelerState {
 }
 
 export interface ControlIntent {
-  forward: number
-  turn: number
+  move: { x: number; y: number }
+  look: { x: number; y: number }
   run: boolean
   jumpPressed: boolean
+  actionPressed: boolean
+  pausePressed: boolean
 }
 
 export interface SurfaceFrame {

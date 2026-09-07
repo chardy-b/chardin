@@ -45,16 +45,18 @@ export function stepPlayerMotor(
     .addScaledVector(up, -state.forward.dot(up))
     .normalize()
 
-  if (intent.turn !== 0) {
-    forward.applyAxisAngle(up, -intent.turn * config.turnSpeed * dt).normalize()
+  if (intent.move.x !== 0) {
+    forward
+      .applyAxisAngle(up, -intent.move.x * config.turnSpeed * dt)
+      .normalize()
   }
 
   const nextUp = up.clone()
-  if (intent.forward !== 0) {
+  if (intent.move.y !== 0) {
     const speed = intent.run ? config.runSpeed : config.walkSpeed
     const axis = up.clone().cross(forward).normalize()
     nextUp
-      .applyAxisAngle(axis, (intent.forward * speed * dt) / radius)
+      .applyAxisAngle(axis, (intent.move.y * speed * dt) / radius)
       .normalize()
     forward = transportForward(up, nextUp, forward)
   }
@@ -80,7 +82,7 @@ export function stepPlayerMotor(
     radialVelocity,
     grounded,
     locomotion: grounded
-      ? intent.forward === 0
+      ? intent.move.y === 0
         ? "idle"
         : intent.run
           ? "run"

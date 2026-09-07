@@ -13,7 +13,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open `http://localhost:3000`, choose **Enter Chardin**, then use W/S or Up/Down to walk and A/D or Left/Right to turn. Hold Shift to run and press Space to jump. The Pause control stops the rendering loop. When WebGL2 is unavailable, the page presents an accessible static explanation and retains the health link.
+Open `http://localhost:3000`, choose **Enter Chardin**, then use W/S or Up/Down to walk and A/D or Left/Right to turn. Look with I/J/K/L, hold Shift to run, press Space to jump, E to act, and Escape to pause. Touch devices receive two-thumb controls with action buttons; standard gamepads use the two sticks, A/B, left-stick click, and Menu. The Pause control stops the rendering loop. When WebGL2 is unavailable, the page presents an accessible static explanation and retains the health link.
 
 ## Quality checks
 
@@ -39,4 +39,4 @@ All visual content remains original, code-generated primitive geometry. External
 
 ## Current limits
 
-WIL-118 adds deterministic fixed-step spherical walk, turn, run, jump, landing, and a transported local-up camera to the WIL-117 foundation. Touch/gamepad input, a final GLB Traveler, authored grass, landmarks/skyspace, postprocessing, adaptive quality, audio, analytics, and deployment to `chardin.chezchardin.com` remain deferred.
+WIL-119 adds normalized keyboard, touch, and standard-gamepad controls while preserving deterministic fixed-step movement. Simultaneous keyboard walk and turn inputs are radially normalized, so each axis is approximately 0.707 at full diagonal input rather than matching WIL-118's full-rate values on both axes. Touch joystick groups remain pointer-operated; their semantic names describe them to assistive technology, but non-pointer movement still requires a keyboard or compatible controller. A final GLB Traveler, authored grass, landmarks/skyspace, postprocessing, adaptive quality, audio, analytics, and deployment to `chardin.chezchardin.com` remain deferred.

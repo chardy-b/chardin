@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest"
 
 import type { TravelerState } from "@/engine/contracts"
 import {
+  CAMERA_PITCH_LIMIT,
+  CAMERA_YAW_LIMIT,
+  applyCameraLook,
   createThirdPersonCameraState,
   updateThirdPersonCamera,
 } from "@/engine/camera/third-person-camera"
@@ -22,8 +25,24 @@ function traveler(angle: number): TravelerState {
 }
 
 describe("transported third-person camera", () => {
+  it("applies bounded device-independent yaw and pitch", () => {
+    const actor = traveler(0)
+    const initial = createThirdPersonCameraState(actor, new THREE.Vector3())
+    const looked = applyCameraLook(initial, { x: 1, y: -1 }, 10)
+    const camera = updateThirdPersonCamera(looked, actor, new THREE.Vector3())
+
+    expect(looked.yaw).toBe(CAMERA_YAW_LIMIT)
+    expect(looked.pitch).toBe(-CAMERA_PITCH_LIMIT)
+    expect(camera.position.toArray().every(Number.isFinite)).toBe(true)
+    expect(camera.forward.dot(actor.forward)).toBeLessThan(0.5)
+    expect(camera.up.dot(actor.position.clone().normalize())).toBeGreaterThan(
+      0.999999,
+    )
+  })
+
   it("follows a complete traversal with local up and finite poses", () => {
     let state = createThirdPersonCameraState(traveler(0), new THREE.Vector3())
+    state = applyCameraLook(state, { x: 0.4, y: -0.25 }, 1)
     let previousUp = state.up.clone()
     for (let sample = 1; sample <= 720; sample += 1) {
       const actor = traveler((sample / 720) * Math.PI * 2)
