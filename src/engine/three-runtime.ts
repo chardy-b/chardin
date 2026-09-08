@@ -20,6 +20,7 @@ import { GamepadInput } from "@/engine/input/gamepad-input"
 import { InputManager } from "@/engine/input/input-manager"
 import { KeyboardInput } from "@/engine/input/keyboard-input"
 import { TouchInput } from "@/engine/input/touch-input"
+import { createTravelerView } from "@/engine/player/traveler-view"
 
 const PLANET_RADIUS = 5
 
@@ -102,21 +103,13 @@ export function createThreeRuntime(
   grass.instanceMatrix.needsUpdate = true
   scene.add(grass)
 
-  const traveler = new THREE.Group()
-  const coatMaterial = new THREE.MeshStandardMaterial({ color: 0xe86f51 })
-  const faceMaterial = new THREE.MeshStandardMaterial({ color: 0xf0c696 })
-  const body = new THREE.Mesh(
-    new THREE.ConeGeometry(0.22, 0.65, 5),
-    coatMaterial,
-  )
-  body.position.y = 0.36
-  traveler.add(body)
-  const head = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(0.17, 1),
-    faceMaterial,
-  )
-  head.position.y = 0.78
-  traveler.add(head)
+  canvas.dataset.travelerModel = "loading"
+  const travelerView = createTravelerView({
+    onStatus: (status) => {
+      canvas.dataset.travelerModel = status
+    },
+  })
+  const traveler = travelerView.object
   scene.add(traveler)
 
   const input = new InputManager([
@@ -134,6 +127,8 @@ export function createThreeRuntime(
     gravity: 9.8,
   }
   let travelerState: TravelerState = createInitialPlayerState(motorConfig)
+  let travelerDistance = 0
+  canvas.dataset.travelerDistance = "0"
   let cameraState = createThirdPersonCameraState(
     travelerState,
     motorConfig.planetCenter,
@@ -208,7 +203,10 @@ export function createThreeRuntime(
         options.onPauseRequested?.()
         return
       }
+      const previousPosition = travelerState.position
       travelerState = stepPlayerMotor(travelerState, intent, motorConfig, dt)
+      travelerDistance += previousPosition.distanceTo(travelerState.position)
+      travelerView.update(travelerState, dt)
       cameraState = applyCameraLook(cameraState, intent.look, dt)
       pendingEdges = {
         jumpPressed: false,
@@ -218,6 +216,7 @@ export function createThreeRuntime(
     },
     render() {
       placeTravelerAndCamera()
+      canvas.dataset.travelerDistance = travelerDistance.toFixed(4)
       renderer.render(scene, camera)
     },
     now: () => performance.now(),
@@ -244,10 +243,7 @@ export function createThreeRuntime(
       planetMaterial.dispose()
       grassGeometry.dispose()
       grassMaterial.dispose()
-      body.geometry.dispose()
-      head.geometry.dispose()
-      coatMaterial.dispose()
-      faceMaterial.dispose()
+      travelerView.dispose()
       renderer.dispose()
     },
   }
