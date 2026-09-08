@@ -14,8 +14,11 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage && node scripts/check-engine-coverage.mjs",
     "test:e2e": "playwright test",
+    "measure:performance": "playwright test --config=playwright.performance.config.ts",
+    "measure:bundle": "node scripts/measure-bundle.mjs",
+    "evidence": "node scripts/release-evidence.mjs",
     "test:e2e:update": "playwright test --update-snapshots",
     "audit": "pnpm audit --audit-level=high",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:run && pnpm build"

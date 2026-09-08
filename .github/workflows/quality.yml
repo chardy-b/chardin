@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  CHARDIN_PR_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+
 jobs:
   quality:
     name: Quality and browser checks
@@ -15,6 +18,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - uses: pnpm/action-setup@v4
         with:
@@ -29,36 +34,49 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Formatting
-        run: pnpm format:check
+        run: pnpm evidence format
 
       - name: Lint
-        run: pnpm lint
+        run: pnpm evidence lint
 
       - name: Type check
-        run: pnpm typecheck
+        run: pnpm evidence types
 
       - name: Unit and component tests with coverage
-        run: pnpm test:coverage
+        run: pnpm evidence coverage
 
       - name: Production build
-        run: pnpm build
+        run: pnpm evidence build
 
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Ordinary production hooks boundary
+        run: pnpm evidence production
+
+      - name: Production client bundle inventory
+        run: pnpm evidence bundle
+
       - name: Browser and visual regression tests
-        run: pnpm test:e2e
+        run: pnpm evidence browser
+
+      - name: Bounded desktop and mobile-emulation measurements
+        run: pnpm evidence performance
 
       - name: Dependency vulnerability audit
-        run: pnpm audit --audit-level=high
+        if: always()
+        run: pnpm evidence audit
 
-      - name: Upload Playwright report on failure
-        if: failure()
+      - name: Upload exact-head evidence, including failed attempts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: wave1-evidence-${{ env.CHARDIN_PR_HEAD }}
           path: |
+            .hermes/execution/chardin/release
+            coverage
             playwright-report
             test-results
-          if-no-files-found: ignore
-          retention-days: 7
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14

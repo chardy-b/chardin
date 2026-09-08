@@ -21,12 +21,14 @@ export default defineConfig({
       "node_modules",
       ".next",
       "tests/e2e",
+      "tests/performance",
+      "tests/production",
       "test-results",
       "playwright-report",
     ],
     coverage: {
       provider: "v8",
-      reporter: ["text", "html"],
+      reporter: ["text", "html", "json", "json-summary"],
       reportsDirectory: "coverage",
       include: [
         "src/engine/**/*.ts",
@@ -51,6 +53,13 @@ export default defineConfig({
         statements: 70,
         functions: 70,
         branches: 60,
+        // Runtime regressions must not be diluted by legacy component coverage.
+        "src/engine/**/*.ts": {
+          lines: 85,
+          statements: 85,
+          functions: 85,
+          branches: 75,
+        },
       },
     },
   },

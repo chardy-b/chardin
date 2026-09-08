@@ -21,7 +21,7 @@ Open `http://localhost:3000`, choose **Enter Chardin**, then use W/S or Up/Down 
 pnpm format:check
 pnpm lint
 pnpm typecheck
-pnpm test:run
+pnpm test:coverage
 pnpm build
 pnpm test:e2e
 ```
@@ -35,7 +35,7 @@ The health endpoint remains available at `/api/health`.
 - [Research and legal boundary](docs/research/messenger-runtime-notes.md)
 - [Original asset policy](docs/original-asset-policy.md)
 
-All visual content remains original, code-generated primitive geometry. External assets require documented redistribution rights. The tiny planet is generated deterministically from a fixed seed: faceted moss, sage, ochre, and warm-earth face colors form broad regions around a compact spawn patch, while one bounded instanced mesh supplies varied three-blade grass tufts across every latitude. Explicit `low` (2,160 terrain vertices / 720 triangles / 520 tufts), `medium` (2,940 / 980 / 960), and `high` (3,840 / 1,280 / 1,520) content profiles live in `src/engine/world/planet.ts`; the runtime selects `low` or `medium` conservatively from device capabilities, and couples terrain and grass when visual quality changes. Each profile uses at least the original detail-5 terrain baseline, and grass bases are queried against those rendered facets. Invalid non-finite optional counts fall back to the selected profile, finite counts clamp to the 1,520-instance ceiling, and negative counts produce no instances. A stable data-only landmark surface frame reserves a cleared site for future skyspace without adding architecture or collision.
+The playable world uses original, code-generated primitive geometry. Legacy showcase thumbnails and template assets remain in the repository with unresolved redistribution decisions; see the [asset audit](docs/asset-audit.md). External assets require documented redistribution rights. The tiny planet is generated deterministically from a fixed seed: faceted moss, sage, ochre, and warm-earth face colors form broad regions around a compact spawn patch, while one bounded instanced mesh supplies varied three-blade grass tufts across every latitude. Explicit `low` (2,160 terrain vertices / 720 triangles / 520 tufts), `medium` (2,940 / 980 / 960), and `high` (3,840 / 1,280 / 1,520) content profiles live in `src/engine/world/planet.ts`; the runtime selects `low` or `medium` conservatively from device capabilities, and couples terrain and grass when visual quality changes. Each profile uses at least the original detail-5 terrain baseline, and grass bases are queried against those rendered facets. Invalid non-finite optional counts fall back to the selected profile, finite counts clamp to the 1,520-instance ceiling, and negative counts produce no instances. A stable data-only landmark surface frame reserves a cleared site for future skyspace without adding architecture or collision.
 
 The third-person traveler is reproducibly generated with `pnpm generate:traveler`. Its node names, clips, coordinate convention, scale, provenance, and license are documented in [`public/models/README.md`](public/models/README.md). The runtime validates this manifest before use and retains a visible primitive fallback during loading or after failure. A future character swap is data-only in `src/engine/assets/manifest.ts` when it preserves that contract.
 
@@ -52,3 +52,7 @@ Browser tests build with `NEXT_PUBLIC_E2E_HOOKS=true`. Only that exact build-tim
 ## Current limits
 
 WIL-119 adds normalized keyboard, touch, and standard-gamepad controls while preserving deterministic fixed-step movement. Simultaneous keyboard walk and turn inputs are radially normalized, so each axis is approximately 0.707 at full diagonal input rather than matching WIL-118's full-rate values on both axes. Touch joystick groups remain pointer-operated; their semantic names describe them to assistive technology, but non-pointer movement still requires a keyboard or compatible controller. The Traveler's compact procedural clips intentionally omit facial and finger animation; missing optional locomotion mappings fall back to `Idle`. Landmark architecture/skyspace, audio, analytics, and deployment to `chardin.chezchardin.com` remain deferred.
+
+## Wave 1 release evidence
+
+WIL-123 adds bounded desktop/mobile-emulation performance collection, production bundle inventory, keyboard/touch/reduced-motion/fallback assertions, engine-specific coverage gates, and exact-head command records. See the [release evidence ledger and standalone commands](docs/release-readiness.md) and [measurement method and pending budgets](docs/performance.md). Collection is not a release approval: measured reports, reviewed cost budgets, independent reviews, exact-head CI, physical-device/Safari checks, two inherited moderate advisories and repository/legacy-asset licensing decisions remain to be resolved. Deployment, DNS and Vercel provisioning remain out of scope.
