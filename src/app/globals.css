@@ -300,3 +300,44 @@ canvas:focus-visible {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* Opaque semantic surfaces preserve HUD contrast on either hemisphere. */
+.status-line {
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.55rem 0.75rem;
+}
+.quality-control {
+  position: absolute;
+  top: 5.25rem;
+  left: clamp(1.25rem, 3vw, 2.5rem);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--ink);
+  background: var(--paper);
+  padding-left: 0.75rem;
+  border-radius: 0.4rem;
+}
+.quality-control select {
+  font: inherit;
+  min-height: 44px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+}
+select:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+.enter-button {
+  color: var(--ink);
+}
+@media (max-width: 600px) {
+  .quality-control {
+    top: 4.5rem;
+  }
+}

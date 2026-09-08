@@ -1,4 +1,5 @@
 import * as THREE from "three"
+import { createToonMaterial } from "@/engine/render/toon-material"
 
 import { SPAWN_DIRECTION } from "@/engine/world/landmark-anchor"
 
@@ -132,6 +133,8 @@ export function createPlanetSurfaceSampler(
   }
 }
 
+/** Convenience query for centered geometry with translation only; rotation, scale
+ * and parent transforms are unsupported. Repeated queries must reuse a sampler. */
 export function samplePlanetSurface(
   mesh: THREE.Mesh<THREE.BufferGeometry>,
   direction: THREE.Vector3,
@@ -167,20 +170,23 @@ export function createPlanet({
   }
   geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3))
   geometry.computeBoundingSphere()
-  const material = new THREE.MeshStandardMaterial({
+  geometry.computeVertexNormals()
+  const material = createToonMaterial({
     vertexColors: true,
-    flatShading: true,
-    roughness: 0.94,
-    metalness: 0,
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.name = "Authored grass planet"
+  mesh.receiveShadow = true
+  const sampler = createPlanetSurfaceSampler(geometry)
   let disposed = false
   return {
     mesh,
     profile: settings,
-    surfaceAt: (direction: THREE.Vector3) =>
-      samplePlanetSurface(mesh, direction),
+    surfaceAt: (direction: THREE.Vector3) => {
+      const sample = sampler.sample(direction)
+      sample.position.add(mesh.position)
+      return sample
+    },
     dispose() {
       if (disposed) return
       disposed = true

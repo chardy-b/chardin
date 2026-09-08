@@ -13,6 +13,7 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    maxWorkers: 1,
     setupFiles: ["./tests/setup.ts"],
     restoreMocks: true,
     clearMocks: true,
@@ -28,6 +29,8 @@ export default defineConfig({
       reporter: ["text", "html"],
       reportsDirectory: "coverage",
       include: [
+        "src/engine/**/*.ts",
+        "src/components/experience/**/*.tsx",
         "src/lib/env.ts",
         "src/lib/errors.ts",
         "src/components/empty-state.tsx",
