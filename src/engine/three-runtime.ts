@@ -21,8 +21,9 @@ import { InputManager } from "@/engine/input/input-manager"
 import { KeyboardInput } from "@/engine/input/keyboard-input"
 import { TouchInput } from "@/engine/input/touch-input"
 import { createTravelerView } from "@/engine/player/traveler-view"
-
-const PLANET_RADIUS = 5
+import { createGrass } from "@/engine/world/grass"
+import { createLandmarkAnchor } from "@/engine/world/landmark-anchor"
+import { PLANET_RADIUS, createPlanet } from "@/engine/world/planet"
 
 export function createThreeRuntime(
   canvas: HTMLCanvasElement,
@@ -54,54 +55,14 @@ export function createThreeRuntime(
   sun.position.set(-5, 9, 7)
   scene.add(sun)
 
-  const planetGeometry = new THREE.IcosahedronGeometry(PLANET_RADIUS, 5)
-  const colors: number[] = []
-  const color = new THREE.Color()
-  const positions = planetGeometry.getAttribute("position")
-  for (let index = 0; index < positions.count; index += 1) {
-    const y = positions.getY(index) / PLANET_RADIUS
-    color.setHSL(0.29 + y * 0.018, 0.35, 0.36 + y * 0.035)
-    colors.push(color.r, color.g, color.b)
-  }
-  planetGeometry.setAttribute(
-    "color",
-    new THREE.Float32BufferAttribute(colors, 3),
+  const planet = createPlanet({ profile: "medium" })
+  const grass = createGrass({ profile: "medium" })
+  const landmarkAnchor = createLandmarkAnchor(
+    new THREE.Vector3(),
+    PLANET_RADIUS,
   )
-  const planetMaterial = new THREE.MeshStandardMaterial({
-    vertexColors: true,
-    flatShading: true,
-    roughness: 0.96,
-  })
-  const planet = new THREE.Mesh(planetGeometry, planetMaterial)
-  scene.add(planet)
-
-  const grassGeometry = new THREE.ConeGeometry(0.025, 0.32, 3)
-  grassGeometry.translate(0, 0.16, 0)
-  const grassMaterial = new THREE.MeshStandardMaterial({ color: 0x78943e })
-  const grass = new THREE.InstancedMesh(grassGeometry, grassMaterial, 190)
-  const dummy = new THREE.Object3D()
-  const goldenAngle = Math.PI * (3 - Math.sqrt(5))
-  for (let index = 0; index < grass.count; index += 1) {
-    const y = 1 - (index / (grass.count - 1)) * 2
-    const radial = Math.sqrt(1 - y * y)
-    const point = new THREE.Vector3(
-      Math.cos(index * goldenAngle) * radial,
-      y,
-      Math.sin(index * goldenAngle) * radial,
-    )
-    if (point.y > 0.82 && Math.abs(point.x) < 0.35) {
-      dummy.scale.setScalar(0)
-    } else {
-      dummy.scale.setScalar(0.7 + ((index * 17) % 9) / 15)
-    }
-    dummy.position.copy(point).multiplyScalar(PLANET_RADIUS + 0.015)
-    dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), point)
-    dummy.rotateY(index * 1.71)
-    dummy.updateMatrix()
-    grass.setMatrixAt(index, dummy.matrix)
-  }
-  grass.instanceMatrix.needsUpdate = true
-  scene.add(grass)
+  scene.userData.landmarkAnchor = landmarkAnchor
+  scene.add(planet.mesh, grass.mesh)
 
   canvas.dataset.travelerModel = "loading"
   const travelerView = createTravelerView({
@@ -239,10 +200,8 @@ export function createThreeRuntime(
       loop.dispose()
       resizeObserver.disconnect()
       input.dispose()
-      planetGeometry.dispose()
-      planetMaterial.dispose()
-      grassGeometry.dispose()
-      grassMaterial.dispose()
+      planet.dispose()
+      grass.dispose()
       travelerView.dispose()
       renderer.dispose()
     },
