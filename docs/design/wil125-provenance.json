@@ -71,8 +71,8 @@
     },
     {
       "path": "src/engine/world/sky-controller.ts",
-      "bytes": 4665,
-      "sha256": "bfb8cd33a1d38b85bf65c926bdb865146d9d772fb0560a25a5aebc4ae99200e2",
+      "bytes": 4877,
+      "sha256": "771ae1b46dee11cf8b4405c336dec06bbd1f4bd656f4afc8739d00d4627b3003",
       "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
       "rights": "original-repository-license-undecided"
     },

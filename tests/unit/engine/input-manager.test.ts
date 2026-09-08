@@ -322,3 +322,66 @@ describe("GamepadInput", () => {
     expect(input.sample()).toMatchObject({ jump: true })
   })
 })
+
+it.each(["Space", "Enter", "KeyE"])(
+  "keeps summary-owned %s events and focus transfers out of gameplay",
+  (code) => {
+    const keyboard = new KeyboardInput(window)
+    const details = document.createElement("details")
+    const summary = document.createElement("summary")
+    const child = document.createElement("span")
+    const canvas = document.createElement("canvas")
+    canvas.tabIndex = 0
+    summary.append(child)
+    details.append(summary)
+    document.body.append(details, canvas)
+    const dispatch = (target: EventTarget, type: string, repeat = false) => {
+      const event = new KeyboardEvent(type, {
+        code,
+        repeat,
+        bubbles: true,
+        cancelable: true,
+      })
+      target.dispatchEvent(event)
+      return event
+    }
+    try {
+      summary.focus()
+      for (const target of [summary, child]) {
+        for (const repeat of [false, true]) {
+          expect(dispatch(target, "keydown", repeat).defaultPrevented).toBe(
+            false,
+          )
+          expect(keyboard.sample()).toEqual({})
+        }
+        expect(dispatch(target, "keyup").defaultPrevented).toBe(false)
+        expect(keyboard.sample()).toEqual({})
+      }
+      dispatch(summary, "keydown")
+      canvas.focus()
+      dispatch(canvas, "keydown", true)
+      expect(keyboard.sample()).toEqual({})
+      dispatch(canvas, "keyup")
+      dispatch(canvas, "keydown")
+      // Focus owns queued edges even before the first simulation sample.
+      summary.focus()
+      expect(keyboard.sample()).toEqual({})
+      expect(dispatch(summary, "keyup").defaultPrevented).toBe(false)
+      canvas.focus()
+      dispatch(canvas, "keydown", true)
+      expect(keyboard.sample()).toEqual({})
+      dispatch(canvas, "keyup")
+      dispatch(canvas, "keydown")
+      if (code === "Enter") expect(keyboard.sample()).toEqual({})
+      else
+        expect(keyboard.sample()).toMatchObject({
+          jump: code === "Space",
+          action: code === "KeyE",
+        })
+    } finally {
+      keyboard.dispose()
+      details.remove()
+      canvas.remove()
+    }
+  },
+)

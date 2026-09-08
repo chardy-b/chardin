@@ -86,6 +86,9 @@ export function createSkyController(
   let tick = 0,
     reducedMotion = initialReducedMotion
   let playback: SkyPlayback = reducedMotion || !validScore ? "still" : "ready"
+  // Every resting state at the terminal tick must retain the Restart action.
+  const restingPlayback = (mode: "paused" | "still"): SkyPlayback =>
+    tick === 10800 ? "complete" : mode
   return {
     snapshot: () => ({
       tick,
@@ -99,12 +102,12 @@ export function createSkyController(
       validTick(next)
       if (!validScore) return
       tick = next
-      playback = tick === 10800 ? "complete" : "paused"
+      playback = restingPlayback("paused")
     },
     setReducedMotion(next: boolean) {
       if (next === reducedMotion) return
       reducedMotion = next
-      if (playback !== "complete") playback = next ? "still" : "paused"
+      playback = restingPlayback(next ? "still" : "paused")
     },
     reset() {
       tick = 0
@@ -112,15 +115,15 @@ export function createSkyController(
     },
     command(command: SkyCommand, inside: boolean) {
       if (!validScore) return
-      if (command === "freeze") playback = "paused"
-      if (command === "still") playback = "still"
+      if (command === "freeze") playback = restingPlayback("paused")
+      if (command === "still") playback = restingPlayback("still")
       if (command === "previous-still" || command === "next-still") {
         const next =
           command === "next-still"
             ? (STILL_TICKS.find((t) => t > tick) ?? 10800)
             : ([...STILL_TICKS].reverse().find((t) => t < tick) ?? 1800)
         tick = next
-        playback = "still"
+        playback = restingPlayback("still")
       }
       if (!inside || reducedMotion) return
       if (command === "start") {

@@ -204,7 +204,7 @@ it("walks and runs ten continuous ramp/chamber/return trips with real collision 
       expect(state.supportId).toBe("planet")
     }
 })
-it("slides at corners and resolves ceiling velocity before landing architecturally upright", () => {
+it("blocks back-wall travel and resolves ceiling velocity before landing architecturally upright", () => {
   const structure = createSkyspaceStructure(),
     collider = createSkyspaceCollider(structure)
   let state: TravelerState = {
@@ -272,13 +272,28 @@ it("allows a ramp-side jump to fall back to radial ground and bounds airborne up
   expect(state.grounded).toBe(true)
   expect(state.position.length()).toBeCloseTo(5.03, 5)
 })
-it("stops residual movement after four slide iterations and rejects an invalid timestep", () => {
+it("discards nonzero residual after exactly four synthetic contact planes", () => {
   const state = createInitialPlayerState(config)
-  const sweepCapsule = vi.fn(() => ({
-    time: 0,
-    normal: new THREE.Vector3(0, 1, 0),
-    id: "ceiling",
-  }))
+  // Four distinct inward planes each turn the residual without eliminating it.
+  // No support/snap sweep: this isolates the slide budget from real geometry.
+  const normals = [45, 15, -15, -45].map((degrees) => {
+    const angle = THREE.MathUtils.degToRad(degrees)
+    return new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle))
+  })
+  const contacts: number[] = []
+  const displacements: THREE.Vector3[] = []
+  const sweepCapsule = vi.fn(
+    (_feet: THREE.Vector3, _up: THREE.Vector3, displacement: THREE.Vector3) => {
+      displacements.push(displacement.clone())
+      const index = contacts.length
+      const normal = normals[index]
+      // A fifth sweep would escape and apply the residual, failing both checks.
+      if (!normal) return null
+      expect(displacement.dot(normal)).toBeLessThan(-1e-4)
+      contacts.push(index + 1)
+      return { time: 0, normal, id: `plane-${index + 1}` }
+    },
+  )
   const collider = {
     sampleSupport: () => null,
     sweepCapsule,
@@ -288,11 +303,31 @@ it("stops residual movement after four slide iterations and rejects an invalid t
   const result = stepPlayerMotor(
     state,
     { ...idle, move: { x: 0, y: 1 } },
-    config,
+    { ...config, gravity: 0 },
     0.1,
     collider,
   )
-  expect(sweepCapsule.mock.calls.length).toBeLessThanOrEqual(4)
+  expect(contacts).toEqual([1, 2, 3, 4])
+  expect(sweepCapsule).toHaveBeenCalledTimes(4)
+  expect(displacements[3].length()).toBeGreaterThan(0.08)
+  // Projection leaves speed * cos(45°) * cos(30°)^3 at +45°.
+  const residualComponent = (config.walkSpeed * 0.1 * 3 * Math.sqrt(3)) / 16
+  expect(result.velocity.x * 0.1).toBeCloseTo(residualComponent, 12)
+  expect(result.velocity.z * 0.1).toBeCloseTo(residualComponent, 12)
+  expect(result.velocity.y).toBe(0)
+  expect(residualComponent).toBeGreaterThan(0.05)
   expect(result.position).toEqual(state.position)
+})
+
+it("rejects an invalid supported-motor timestep before querying collisions", () => {
+  const state = createInitialPlayerState(config)
+  const sampleSupport = vi.fn(() => null)
+  const collider = {
+    sampleSupport,
+    sweepCapsule: () => null,
+    sweepCamera: () => null,
+    containsFootprint: () => true,
+  }
   expect(stepPlayerMotor(state, idle, config, NaN, collider)).toBe(state)
+  expect(sampleSupport).not.toHaveBeenCalled()
 })

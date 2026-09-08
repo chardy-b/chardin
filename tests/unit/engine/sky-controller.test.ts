@@ -86,7 +86,7 @@ it("holds safe neutral on invalid score data and handles every explicit still co
   sky.setReducedMotion(false)
   sky.command("freeze", true)
   sky.command("still", true)
-  expect(sky.snapshot().playback).toBe("still")
+  expect(sky.snapshot().playback).toBe("complete")
   sky.reset()
   expect(sky.snapshot()).toMatchObject({ tick: 0, playback: "ready" })
 })
@@ -110,3 +110,23 @@ it("has zero endpoint slope and identical fixed-tick results across render group
   expect(a.snapshot()).toEqual(b.snapshot())
   expect(a.frame()).toEqual(b.frame())
 })
+
+it.each(["next-still", "still", "freeze"] as const)(
+  "keeps the final endpoint complete through %s and preference changes",
+  (command) => {
+    const sky = createSkyController(false)
+    sky.setTick(10800)
+    sky.command(command, true)
+    for (const reduced of [true, false]) {
+      sky.setReducedMotion(reduced)
+      sky.step(true, true)
+      expect(sky.snapshot()).toMatchObject({
+        tick: 10800,
+        playback: "complete",
+      })
+    }
+    sky.command("start", true)
+    sky.step(true, true)
+    expect(sky.snapshot()).toMatchObject({ tick: 1, playback: "playing" })
+  },
+)

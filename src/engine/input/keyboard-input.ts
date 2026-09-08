@@ -27,7 +27,7 @@ function isInteractiveTarget(target: EventTarget | null) {
     target instanceof Element &&
     Boolean(
       target.closest(
-        "button, a, input, textarea, select, [role='button'], [contenteditable]:not([contenteditable='false'])",
+        "button, a, input, textarea, select, summary, [role='button'], [contenteditable]:not([contenteditable='false'])",
       ),
     )
   )
@@ -42,6 +42,12 @@ export class KeyboardInput implements InputAdapter {
   constructor(private readonly target: Window) {
     target.addEventListener("keydown", this.onKeyDown)
     target.addEventListener("keyup", this.onKeyUp)
+    target.addEventListener("focusin", this.onFocusIn)
+  }
+
+  private onFocusIn = (event: FocusEvent) => {
+    // Relinquish held keys and queued edges when focus moves into native UI.
+    if (isInteractiveTarget(event.target)) this.clear()
   }
 
   private onKeyDown = (event: KeyboardEvent) => {
@@ -75,6 +81,7 @@ export class KeyboardInput implements InputAdapter {
     if (!HANDLED_CODES.has(event.code)) return
     if (isInteractiveTarget(event.target)) {
       this.keys.delete(event.code)
+      this.pressedEdges.delete(event.code)
       this.suppressedEdgesUntilKeyUp.delete(event.code)
       return
     }
@@ -130,5 +137,6 @@ export class KeyboardInput implements InputAdapter {
     this.disposed = true
     this.target.removeEventListener("keydown", this.onKeyDown)
     this.target.removeEventListener("keyup", this.onKeyUp)
+    this.target.removeEventListener("focusin", this.onFocusIn)
   }
 }

@@ -53,3 +53,5 @@ The 2026-09-08 blanket user approval fulfills **design approval**. It does not e
 ## Implementation record
 
 The WIL-125 implementation, passing controller browser/visual/performance/baseline/audit evidence and remaining requirements are mapped in [wil125-validation.md](wil125-validation.md). The table above remains binding. Controller passes on the live uncommitted tree do not close exact committed-head CI, independent review, physical-device/Safari, numeric owner approval, security or rights gates.
+
+The 2026-09-08 independent-review repairs add production component/Experience/runtime coverage in `src/components/experience/chardin-experience.integration.test.tsx` for A04/A05/A11 terminal Restart, live preferences, Still after completion and summary input ownership. A06/A13 four-contact exhaustion uses explicit synthetic contact planes and mutation checks, separately from real-collider tests. See the [repair ledger](wil125-validation.md#2026-09-08-independent-review-repairs) for evidence boundaries and the review's remaining acceptance cases; no baseline tolerance or release gate is relaxed.
