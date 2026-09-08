@@ -131,11 +131,26 @@ test("unsupported WebGL retains keyboard recovery and usable health link", async
     } as typeof HTMLCanvasElement.prototype.getContext
   })
   await page.goto("/")
-  await expect(page.getByRole("alert")).toContainText("Chardin needs WebGL2")
-  await tabTo(page, page.getByRole("button", { name: "Retry" }))
+  // Next's route announcer also has role="alert"; identify the application panel
+  // by its heading so an empty (or text-only) announcement cannot match.
+  const failure = page.getByRole("alert").filter({
+    has: page.getByRole("heading", {
+      name: "Chardin needs WebGL2 to open.",
+      exact: true,
+    }),
+  })
+  await expect(failure).toHaveCount(1)
+  await expect(failure).toBeVisible()
+  await tabTo(page, failure.getByRole("button", { name: "Retry", exact: true }))
   await page.keyboard.press("Enter")
-  await expect(page.getByRole("alert")).toContainText("Chardin needs WebGL2")
-  await tabTo(page, page.getByRole("link", { name: "Check system health" }))
+  await expect(failure).toHaveCount(1)
+  await expect(failure).toBeVisible()
+  const health = failure.getByRole("link", {
+    name: "Check system health",
+    exact: true,
+  })
+  await expect(health).toHaveAttribute("href", "/api/health")
+  await tabTo(page, health)
   await targets(page)
   expect(
     await page.evaluate(() => Object.hasOwn(window, "__CHARDIN_TEST__")),

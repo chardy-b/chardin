@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react"
+import { act, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -8,6 +8,7 @@ const controls = {
   start: vi.fn(() => true),
   pause: vi.fn(),
   resume: vi.fn(),
+  retry: vi.fn(),
   dispose: vi.fn(),
 }
 let publishState: (state: ExperienceState) => void
@@ -54,6 +55,50 @@ describe("ChardinExperience", () => {
     const view = render(<ChardinExperience />)
     view.unmount()
     expect(controls.dispose).toHaveBeenCalledOnce()
+  })
+
+  it("keeps the WebGL2 alert and keyboard recovery usable beside a route announcer", async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <ChardinExperience />
+        <div id="__next-route-announcer__" role="alert" aria-live="assertive" />
+      </>,
+    )
+    act(() => publishState({ status: "failed", code: "webgl2" }))
+
+    const alerts = screen.getAllByRole("alert")
+    expect(alerts).toHaveLength(2)
+    const failures = alerts.filter((alert) =>
+      within(alert).queryByRole("heading", {
+        name: "Chardin needs WebGL2 to open.",
+      }),
+    )
+    expect(failures).toHaveLength(1)
+    const failure = failures[0]
+    expect(failure).toBeVisible()
+    expect(failure).not.toHaveAttribute("id", "__next-route-announcer__")
+    const retry = within(failure).getByRole("button", {
+      name: "Retry",
+    })
+    for (let i = 0; i < 30 && document.activeElement !== retry; i++) {
+      await user.tab()
+    }
+    expect(retry).toHaveFocus()
+    await user.keyboard("{Enter}")
+    expect(controls.retry).toHaveBeenCalledOnce()
+    act(() => publishState({ status: "failed", code: "webgl2" }))
+    expect(failure).toBeVisible()
+    expect(controls.start).not.toHaveBeenCalled()
+    expect(controls.resume).not.toHaveBeenCalled()
+
+    await user.tab()
+    const health = within(failure).getByRole("link", {
+      name: "Check system health",
+    })
+    expect(health).toBeVisible()
+    expect(health).toHaveFocus()
+    expect(health).toHaveAttribute("href", "/api/health")
   })
 
   it("offers resume and movement help from the paused panel", async () => {
