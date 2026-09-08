@@ -27,7 +27,7 @@ function isInteractiveTarget(target: EventTarget | null) {
     target instanceof Element &&
     Boolean(
       target.closest(
-        "button, a, input, textarea, select, [role='button'], [contenteditable]:not([contenteditable='false'])",
+        "button, a, input, textarea, select, summary, [role='button'], [contenteditable]:not([contenteditable='false'])",
       ),
     )
   )
@@ -39,15 +39,41 @@ export class KeyboardInput implements InputAdapter {
   private readonly suppressedEdgesUntilKeyUp = new Set<string>()
   private disposed = false
 
-  constructor(private readonly target: Window) {
+  constructor(
+    private readonly target: Window,
+    private onRelinquish?: () => void,
+  ) {
     target.addEventListener("keydown", this.onKeyDown)
     target.addEventListener("keyup", this.onKeyUp)
+    target.addEventListener("focusin", this.onFocusIn)
+  }
+
+  private onFocusIn = (event: FocusEvent) => {
+    if (this.disposed || !isInteractiveTarget(event.target)) return
+    // The runtime may already have sampled an edge in a zero-step RAF frame.
+    // Relinquish both queues synchronously, before the next simulation tick.
+    this.clear()
+    this.onRelinquish?.()
   }
 
   private onKeyDown = (event: KeyboardEvent) => {
     if (!HANDLED_CODES.has(event.code)) return
-    if (isInteractiveTarget(event.target)) return
+    if (
+      isInteractiveTarget(event.target) ||
+      this.target.document.querySelector(
+        "dialog[open], [role=dialog][aria-modal=true]",
+      )
+    )
+      return
     event.preventDefault()
+    // A held key may have started on a control/modal that owns its keydown.
+    // Repeats after focus returns must never manufacture a gameplay edge.
+    if (
+      event.repeat &&
+      EDGE_CODES.has(event.code) &&
+      !this.keys.has(event.code)
+    )
+      return
     if (this.suppressedEdgesUntilKeyUp.has(event.code)) {
       if (event.repeat) return
       this.suppressedEdgesUntilKeyUp.delete(event.code)
@@ -61,6 +87,7 @@ export class KeyboardInput implements InputAdapter {
     if (!HANDLED_CODES.has(event.code)) return
     if (isInteractiveTarget(event.target)) {
       this.keys.delete(event.code)
+      this.pressedEdges.delete(event.code)
       this.suppressedEdgesUntilKeyUp.delete(event.code)
       return
     }
@@ -70,6 +97,14 @@ export class KeyboardInput implements InputAdapter {
   }
 
   sample(): PartialControlIntent {
+    if (
+      this.target.document.querySelector(
+        "dialog[open], [role=dialog][aria-modal=true]",
+      )
+    ) {
+      this.clear()
+      return {}
+    }
     if (this.disposed || (this.keys.size === 0 && this.pressedEdges.size === 0))
       return {}
     const x =
@@ -106,7 +141,9 @@ export class KeyboardInput implements InputAdapter {
     if (this.disposed) return
     this.clear()
     this.disposed = true
+    this.onRelinquish = undefined
     this.target.removeEventListener("keydown", this.onKeyDown)
     this.target.removeEventListener("keyup", this.onKeyUp)
+    this.target.removeEventListener("focusin", this.onFocusIn)
   }
 }

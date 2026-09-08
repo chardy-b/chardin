@@ -12,6 +12,10 @@ afterEach(() => {
 })
 
 const state = (locomotion: TravelerState["locomotion"]): TravelerState => ({
+  velocity: new THREE.Vector3(),
+  supportUp: new THREE.Vector3(0, 1, 0),
+  supportId: "planet",
+  previousGroundedSupport: "planet",
   position: new THREE.Vector3(0, 5, 0),
   forward: new THREE.Vector3(0, 0, -1),
   radialVelocity: 0,
@@ -239,4 +243,39 @@ it("clears the deadline after timely success without aborting or replacing the l
   expect(onStatus).toHaveBeenCalledExactlyOnceWith("loaded")
   expect(asset.dispose).not.toHaveBeenCalled()
   view.dispose()
+})
+
+it("keeps the real outer scene owner hidden across a pending fallback/model swap and restores on disposal", async () => {
+  let complete!: (asset: CharacterAsset) => void
+  const view = createTravelerView({
+    load: () =>
+      new Promise((resolve) => {
+        complete = resolve
+      }),
+  })
+  const scene = new THREE.Scene()
+  scene.add(view.object)
+  const fallback = view.object.children[0]
+  view.object.visible = false
+  const visible = () => {
+    const objects: THREE.Object3D[] = []
+    scene.traverseVisible((object) => objects.push(object))
+    return objects
+  }
+  expect(visible()).not.toContain(fallback)
+  const asset = fakeAsset()
+  complete(asset)
+  await view.ready
+  expect(fallback.parent).toBeNull()
+  expect(asset.root.parent).toBe(view.object)
+  expect(visible()).not.toContain(asset.root)
+  view.update(state("walk"), 1 / 60)
+  expect(view.object.visible).toBe(false)
+  view.object.visible = true
+  expect(visible()).toContain(asset.root)
+  view.object.visible = false
+  view.dispose()
+  expect(view.object.visible).toBe(true)
+  expect(view.object.parent).toBeNull()
+  expect(asset.dispose).toHaveBeenCalledOnce()
 })

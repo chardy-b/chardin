@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "id": "wil125-original-pavilion",
+  "creator": "Codex implementation agent, commissioned for the Chardin project; human ownership confirmation pending",
+  "createdAt": "2026-09-08",
+  "source": "original; first-principles coordinates, clearance, enclosure, contrast and slow linear-color relationships from docs/design/wil124-skyspace.md",
+  "externalInputs": [],
+  "generationCommand": "No binary export. createSkyspaceLandmark() runs during existing runtime loading. Canonical CPU record: WIL125_CANONICAL_OUTPUT=/tmp/wil125-canonical.json pnpm exec vitest run tests/unit/engine/skyspace-geometry.test.ts",
+  "dependencyVersions": {
+    "three": "0.185.1",
+    "postprocessing": "6.39.4"
+  },
+  "parameters": {
+    "seed": "none; fixed deterministic geometry and score, existing Planet seed unchanged",
+    "anchorDirection": [0.72, 0.38, 0.58],
+    "heading": 0,
+    "planetRadius": 5,
+    "motorRadius": 5.03,
+    "clearingAngle": 0.75,
+    "rampGrid": 0.1,
+    "scoreSeconds": 180,
+    "ticksPerSecond": 60,
+    "scoreVersion": 1,
+    "stillTicks": [1800, 4500, 6300, 8100, 10800],
+    "specification": "docs/design/wil124-skyspace.md"
+  },
+  "modifications": "Original implementation of the approved WIL-124 definition; no third-party model, layout, image, shader, palette, sequence or audio copied. Existing project manifest and CSS are extended. No binary export or browser baseline added.",
+  "canonicalGeometry": {
+    "id": "skyspace-pavilion-v1",
+    "collisionTriangles": 642,
+    "decorationTriangles": 194,
+    "colorTriangles": 836,
+    "colorMaterialGroups": 4,
+    "addedTextureBytes": 0,
+    "addedPostprocessingPasses": 0,
+    "addedAudioBytes": 0,
+    "localBounds": {
+      "min": [-1.32, -1.527968894148556, -1.52],
+      "max": [1.32, 2.35, 3.25]
+    },
+    "frameDeterminant": 1
+  },
+  "rightsStatus": "original; repository license pending",
+  "rightsHolder": "Chardin project owner confirmation pending; agent-assisted authorship does not establish legal ownership",
+  "permissionEvidence": "docs/design/wil124-skyspace.md section 1: user approval of the design; this authorizes local implementation, not a distribution license",
+  "permittedUse": "Local authorized repository implementation and review. Public repository distribution and product release require owner confirmation of original-work rights and repository license.",
+  "attribution": "This record and docs/asset-audit.md; no third-party creative asset attribution required",
+  "dependencyNoticeLocations": [
+    "node_modules/three/LICENSE",
+    "node_modules/postprocessing/LICENSE.md"
+  ],
+  "review": {
+    "reviewer": null,
+    "date": null,
+    "decision": "Independent final-diff originality and rights review pending"
+  },
+  "files": [
+    {
+      "path": "src/engine/assets/manifest.ts",
+      "bytes": 4177,
+      "sha256": "63da06dce1084dd3a0f9a4d9d342affa615a148dc27940f30e1fd088b6b724a6",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/world/skyspace-landmark.ts",
+      "bytes": 11901,
+      "sha256": "bcd1cb2d3a2d5539f4950cc0e626d335bf281e8f94c90a897a993fe4a15c75ab",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/world/sky-controller.ts",
+      "bytes": 4877,
+      "sha256": "771ae1b46dee11cf8b4405c336dec06bbd1f4bd656f4afc8739d00d4627b3003",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/components/experience/pavilion-description.tsx",
+      "bytes": 3026,
+      "sha256": "642c293ccb1f83e51d17ef22e2ec475f4bd74d435bd70c37f008b69fd3ebce74",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/app/globals.css",
+      "bytes": 11301,
+      "sha256": "827f8ce3fb526ab6a685ce6f308beaaf2ea9542249e12d0ebe52e4590b24324e",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
+      "rights": "original-repository-license-undecided"
+    }
+  ],
+  "kind": "original procedural geometry, material parameters, light score and HTML still alternative"
+}

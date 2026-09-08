@@ -86,3 +86,44 @@ export const travelerManifest = validateCharacterManifest({
     rightHand: "RightHand",
   },
 })
+
+/** Fixed, original procedural content. No URL or arbitrary geometry input. */
+export const landmarkDefinition = Object.freeze({
+  id: "skyspace-pavilion-v1",
+  generatorId: "chardin-radial-pavilion-v1",
+  provenanceId: "wil125-original-pavilion",
+  dimensionsVersion: 1,
+  scoreVersion: 1,
+  radius: 5,
+  groundRadius: 5.03,
+  heading: 0,
+  clearingAngle: 0.75,
+  direction: Object.freeze([0.72, 0.38, 0.58]),
+  aperture: Object.freeze(
+    [
+      [-0.55, -0.75],
+      [0.65, -0.55],
+      [0.5, 0.4],
+      [-0.35, 0.4],
+    ].map((p) => Object.freeze(p)),
+  ),
+})
+export type LandmarkDefinition = typeof landmarkDefinition
+export function validateLandmarkDefinition(value: unknown): LandmarkDefinition {
+  // Versioned authoring contract: reject extra fields as well as altered/nonfinite
+  // dimensions. This scope intentionally does not accept arbitrary level data.
+  if (!value || typeof value !== "object")
+    throw new Error("Invalid pavilion definition")
+  const candidate = value as Record<string, unknown>
+  const keys = Object.keys(landmarkDefinition)
+  if (
+    Object.keys(candidate).length !== keys.length ||
+    keys.some(
+      (key) =>
+        JSON.stringify(candidate[key]) !==
+        JSON.stringify(landmarkDefinition[key as keyof LandmarkDefinition]),
+    )
+  )
+    throw new Error("Invalid pavilion definition")
+  return landmarkDefinition
+}

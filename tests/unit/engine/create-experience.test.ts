@@ -244,3 +244,91 @@ it("keeps repeated Retry during context loss recoverable and waits for a fresh g
   expect(restored.start).toHaveBeenCalledOnce()
   experience.dispose()
 })
+
+it("generation-guards sky status, forwards commands and permits paused rebuild only for absent pavilion", () => {
+  const canvas = document.createElement("canvas"),
+    onState = vi.fn(),
+    onSkyStatus = vi.fn()
+  const instances: Array<{
+    options: import("@/engine/contracts").RuntimeOptions
+    skyCommand: ReturnType<typeof vi.fn>
+  }> = []
+  const experience = createExperience({
+    canvas,
+    onState,
+    onSkyStatus,
+    getWebGL2Context: () => ({}) as WebGL2RenderingContext,
+    createRuntime: (_c, _g, options = {}) => {
+      const runtime = {
+        options,
+        skyCommand: vi.fn(),
+        start: vi.fn(),
+        pause: vi.fn(),
+        resume: vi.fn(),
+        dispose: vi.fn(),
+      }
+      instances.push(runtime)
+      return runtime
+    },
+  })
+  experience.start()
+  experience.pause()
+  experience.retry()
+  expect(instances).toHaveLength(1)
+  const status = {
+    phase: "Settle",
+    playback: "ready" as const,
+    inside: false,
+    viewingZone: false,
+    viewing: false,
+    available: false,
+    scoreAvailable: true,
+    reducedMotion: false,
+  }
+  instances[0]!.options.onSkyStatus!(status)
+  experience.skyCommand("return-to-clearing")
+  expect(instances[0]!.skyCommand).toHaveBeenCalledWith("return-to-clearing")
+  experience.retry()
+  expect(instances).toHaveLength(2)
+  experience.start()
+  instances[0]!.options.onPauseRequested!()
+  expect(onState).toHaveBeenLastCalledWith({ status: "running" })
+  onSkyStatus.mockClear()
+  instances[0]!.options.onSkyStatus!(status)
+  expect(onSkyStatus).not.toHaveBeenCalled()
+  experience.dispose()
+  instances[1]!.options.onSkyStatus!(status)
+  expect(onSkyStatus).not.toHaveBeenCalled()
+})
+
+it.each([
+  ["true", "/?e2e=1", true],
+  ["true", "/", false],
+  ["false", "/?e2e=1", false],
+])(
+  "sets immutable context preservation at creation only for manual mode (%s, %s)",
+  (flag, url, preserved) => {
+    vi.stubEnv("NEXT_PUBLIC_E2E_HOOKS", flag)
+    window.history.replaceState({}, "", url)
+    const canvas = document.createElement("canvas")
+    const getContext = vi
+      .spyOn(canvas, "getContext")
+      .mockReturnValue({} as WebGL2RenderingContext)
+    const experience = createExperience({
+      canvas,
+      onState: vi.fn(),
+      createRuntime: () => ({
+        start() {},
+        pause() {},
+        resume() {},
+        dispose() {},
+      }),
+    })
+    expect(getContext).toHaveBeenCalledExactlyOnceWith("webgl2", {
+      preserveDrawingBuffer: preserved,
+    })
+    experience.dispose()
+    vi.unstubAllEnvs()
+    window.history.replaceState({}, "", "/")
+  },
+)

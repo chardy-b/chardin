@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "scope": "Tracked public assets, favicon and visual baselines. Dependency notices are separate. Hashes establish inventory integrity, not copyright clearance.",
+  "scope": "Tracked public assets, favicon, visual baselines and the explicitly inventoried WIL-125 procedural source files. Dependency notices are separate. Hashes establish inventory integrity, not copyright clearance.",
   "entries": [
     {
       "path": "public/file.svg",
@@ -137,37 +137,72 @@
     },
     {
       "path": "tests/e2e/chardin.visual.spec.ts-snapshots/spawn-chromium-linux.png",
-      "bytes": 172950,
-      "sha256": "e267cf4fd7d2da29f8f7c5e57489ac0f3dfca904f61789060b308e663a8d1e26",
+      "bytes": 187560,
+      "sha256": "584d7dadea7f5536fe8b7c4c816f0f80d031a24f2153798154695f3b451a769c",
       "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "tests/e2e/chardin.visual.spec.ts-snapshots/spawn-mobile-chromium-linux.png",
-      "bytes": 67259,
-      "sha256": "c72fbad2d3a4be04a76d2c27c053e962335307f55d6c7a848e46ecb981aa93fd",
+      "bytes": 76640,
+      "sha256": "08a9ead699e94b15cf0c5369f61e85cf1aa8f275c156f65b908ece1840d5e3a6",
       "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "tests/e2e/chardin.visual.spec.ts-snapshots/tablet-chromium-linux.png",
-      "bytes": 144066,
-      "sha256": "b9c7e2ec9b8d6e7631fd8f199d7b12850b1329f8764755fb720cbde2e10a9629",
+      "bytes": 164160,
+      "sha256": "a4fcade47cdba7b71fe3d70aad2ab46e831eb9ed45b00207d22168c8cf470c2b",
       "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "tests/e2e/chardin.visual.spec.ts-snapshots/traveled-chromium-linux.png",
-      "bytes": 177699,
-      "sha256": "5fe45dcc0d89130a682f24ad655cd0ac04777cbffeb34d159cd95954be95ac61",
+      "bytes": 188057,
+      "sha256": "dda49c9ed755dddc4cc37af82b895a9d3aec24a8d03b7aab171ed4c11e7088b2",
       "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "tests/e2e/chardin.visual.spec.ts-snapshots/traveled-mobile-chromium-linux.png",
-      "bytes": 74632,
-      "sha256": "670c0e79146be3fbdff23ebc8bd6a62ee382968494bc3137f07e924349dd7bb4",
+      "bytes": 78557,
+      "sha256": "2bc5c897b746d9ea53971053ca379d0b22fb00984e3e10dde9dc0f9559713441",
       "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/assets/manifest.ts",
+      "bytes": 4177,
+      "sha256": "63da06dce1084dd3a0f9a4d9d342affa615a148dc27940f30e1fd088b6b724a6",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/world/skyspace-landmark.ts",
+      "bytes": 11901,
+      "sha256": "bcd1cb2d3a2d5539f4950cc0e626d335bf281e8f94c90a897a993fe4a15c75ab",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/world/sky-controller.ts",
+      "bytes": 4877,
+      "sha256": "771ae1b46dee11cf8b4405c336dec06bbd1f4bd656f4afc8739d00d4627b3003",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/components/experience/pavilion-description.tsx",
+      "bytes": 3026,
+      "sha256": "642c293ccb1f83e51d17ef22e2ec475f4bd74d435bd70c37f008b69fd3ebce74",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/app/globals.css",
+      "bytes": 11301,
+      "sha256": "827f8ce3fb526ab6a685ce6f308beaaf2ea9542249e12d0ebe52e4590b24324e",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
       "rights": "original-repository-license-undecided"
     }
   ]

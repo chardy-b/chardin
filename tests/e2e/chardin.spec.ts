@@ -104,6 +104,7 @@ test.describe("Chardin world", () => {
     await page.keyboard.press("Space")
     await expect(page.getByLabel("Movement guide")).toBeVisible()
     await page.getByRole("button", { name: "Close guide" }).click()
+    await page.getByRole("button", { name: "Resume", exact: true }).click()
     await canvas.focus()
     const beforeWalk = await captureManualFrame(page)
     await page.keyboard.down("KeyW")
@@ -167,6 +168,7 @@ test.describe("Chardin world", () => {
     await guide.tap()
     await expect(page.getByLabel("Movement guide")).toBeVisible()
     await page.getByRole("button", { name: "Close guide" }).tap()
+    await page.getByRole("button", { name: "Resume", exact: true }).tap()
 
     const move = page.getByLabel("Move traveler")
     const bounds = await move.boundingBox()

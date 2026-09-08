@@ -14,7 +14,14 @@ it("requires every distributed asset and visual baseline to have a matching prov
     .split("\n")
     .filter((path) => !path.endsWith(".md"))
   expect(inventory.entries.map((entry) => entry.path).sort()).toEqual(
-    tracked.sort(),
+    [
+      ...tracked,
+      "src/engine/assets/manifest.ts",
+      "src/engine/world/skyspace-landmark.ts",
+      "src/engine/world/sky-controller.ts",
+      "src/components/experience/pavilion-description.tsx",
+      "src/app/globals.css",
+    ].sort(),
   )
   for (const entry of inventory.entries) {
     const bytes = readFileSync(entry.path)

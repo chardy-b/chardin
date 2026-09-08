@@ -14,8 +14,8 @@ This vocabulary is canonical for the Chardin runtime.
 | Motor             | A pure movement state transition using Control intent, Planet geometry, and elapsed time.                                           | Including camera or rendering logic.          |
 | Camera rig        | Camera state that follows the Traveler relative to the Planet.                                                                      | Fixed-world-up camera logic.                  |
 | Landmark          | Authored content anchored by a position and tangent frame on the Planet.                                                            | Parenting landmarks to the Traveler.          |
-| Skyspace          | A future original Landmark whose aperture and authored light sequence shape perception.                                             | Replicating a named artwork.                  |
+| Skyspace          | An original raised Landmark whose aperture and visitor-started light sequence shape perception.                                     | Replicating a named artwork.                  |
 | Rendering profile | Quality-controlled renderer and scene settings.                                                                                     | Scattered device checks.                      |
 | Content manifest  | Typed declarations for replaceable authored content.                                                                                | Unstructured asset URLs in engine code.       |
 
-The placeholder cone-and-icosahedron figure is a Character asset; its position and direction are Traveler state. The Planet is the sphere and its surface queries; a future pavilion attached in a local tangent frame will be a Landmark.
+The placeholder cone-and-icosahedron figure is a Character asset; its position and direction are Traveler state. The Planet is the sphere and its surface queries; the pavilion attached in its authored local tangent frame is a Landmark.

@@ -14,7 +14,7 @@ export interface LandmarkAnchor {
   clearingAngle: number
 }
 
-/** A data-only reservation for the future skyspace. It intentionally renders nothing. */
+/** The original pavilion reservation, shared by every grass profile. */
 export function createLandmarkAnchor(
   center = new THREE.Vector3(),
   radius = 5,
@@ -28,5 +28,5 @@ export function createLandmarkAnchor(
     position,
     new THREE.Vector3(0, 0, -1),
   )
-  return { position, frame, clearingAngle: 0.25 }
+  return { position, frame, clearingAngle: 0.75 }
 }

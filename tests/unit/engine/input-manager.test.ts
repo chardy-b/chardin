@@ -187,6 +187,48 @@ describe("KeyboardInput", () => {
   })
 
   it.each(["Escape", "Space", "KeyE"])(
+    "requires a fresh %s press after focus leaves a control or modal",
+    (code) => {
+      const keyboard = new KeyboardInput(window)
+      const button = document.createElement("button")
+      const dialog = document.createElement("dialog")
+      document.body.append(button, dialog)
+      try {
+        for (const target of [button, window]) {
+          dialog.open = target === window
+          const press = new KeyboardEvent("keydown", {
+            code,
+            bubbles: true,
+            cancelable: true,
+          })
+          target.dispatchEvent(press)
+          expect(press.defaultPrevented).toBe(false)
+          expect(keyboard.sample()).toEqual({})
+          dialog.open = false
+          keyboard.clear()
+          window.dispatchEvent(
+            new KeyboardEvent("keydown", { code, repeat: true }),
+          )
+          expect(keyboard.sample()).toEqual({})
+          window.dispatchEvent(new KeyboardEvent("keyup", { code }))
+          window.dispatchEvent(new KeyboardEvent("keydown", { code }))
+          expect(keyboard.sample()).toMatchObject({
+            jump: code === "Space",
+            action: code === "KeyE",
+            pause: code === "Escape",
+          })
+          window.dispatchEvent(new KeyboardEvent("keyup", { code }))
+          expect(keyboard.sample()).toEqual({})
+        }
+      } finally {
+        keyboard.dispose()
+        button.remove()
+        dialog.remove()
+      }
+    },
+  )
+
+  it.each(["Escape", "Space", "KeyE"])(
     "does not recreate a %s edge from auto-repeat after clear",
     (code) => {
       const keyboard = new KeyboardInput(window)
@@ -280,3 +322,66 @@ describe("GamepadInput", () => {
     expect(input.sample()).toMatchObject({ jump: true })
   })
 })
+
+it.each(["Space", "Enter", "KeyE"])(
+  "keeps summary-owned %s events and focus transfers out of gameplay",
+  (code) => {
+    const keyboard = new KeyboardInput(window)
+    const details = document.createElement("details")
+    const summary = document.createElement("summary")
+    const child = document.createElement("span")
+    const canvas = document.createElement("canvas")
+    canvas.tabIndex = 0
+    summary.append(child)
+    details.append(summary)
+    document.body.append(details, canvas)
+    const dispatch = (target: EventTarget, type: string, repeat = false) => {
+      const event = new KeyboardEvent(type, {
+        code,
+        repeat,
+        bubbles: true,
+        cancelable: true,
+      })
+      target.dispatchEvent(event)
+      return event
+    }
+    try {
+      summary.focus()
+      for (const target of [summary, child]) {
+        for (const repeat of [false, true]) {
+          expect(dispatch(target, "keydown", repeat).defaultPrevented).toBe(
+            false,
+          )
+          expect(keyboard.sample()).toEqual({})
+        }
+        expect(dispatch(target, "keyup").defaultPrevented).toBe(false)
+        expect(keyboard.sample()).toEqual({})
+      }
+      dispatch(summary, "keydown")
+      canvas.focus()
+      dispatch(canvas, "keydown", true)
+      expect(keyboard.sample()).toEqual({})
+      dispatch(canvas, "keyup")
+      dispatch(canvas, "keydown")
+      // Focus owns queued edges even before the first simulation sample.
+      summary.focus()
+      expect(keyboard.sample()).toEqual({})
+      expect(dispatch(summary, "keyup").defaultPrevented).toBe(false)
+      canvas.focus()
+      dispatch(canvas, "keydown", true)
+      expect(keyboard.sample()).toEqual({})
+      dispatch(canvas, "keyup")
+      dispatch(canvas, "keydown")
+      if (code === "Enter") expect(keyboard.sample()).toEqual({})
+      else
+        expect(keyboard.sample()).toMatchObject({
+          jump: code === "Space",
+          action: code === "KeyE",
+        })
+    } finally {
+      keyboard.dispose()
+      details.remove()
+      canvas.remove()
+    }
+  },
+)

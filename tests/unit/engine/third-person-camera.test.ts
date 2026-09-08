@@ -1,5 +1,5 @@
 import * as THREE from "three"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import type { TravelerState } from "@/engine/contracts"
 import {
@@ -12,6 +12,10 @@ import {
 
 function traveler(angle: number): TravelerState {
   return {
+    velocity: new THREE.Vector3(),
+    supportUp: new THREE.Vector3(0, 1, 0),
+    supportId: "planet",
+    previousGroundedSupport: "planet",
     position: new THREE.Vector3(
       Math.sin(angle),
       Math.cos(angle),
@@ -59,4 +63,230 @@ describe("transported third-person camera", () => {
       previousUp = state.up
     }
   })
+})
+
+import { createSkyspaceStructure } from "@/engine/world/skyspace-landmark"
+import { createSkyspaceCollider } from "@/engine/world/skyspace-collider"
+it("shortens both camera sweeps, checks eye fallback, and directly frames the aperture", () => {
+  const structure = createSkyspaceStructure(),
+    collider = createSkyspaceCollider(structure)
+  const actor = {
+    ...traveler(0),
+    position: structure.toWorld(new THREE.Vector3(0, 0.12, 0.5)),
+    supportUp: new THREE.Vector3(0, 1, 0).transformDirection(structure.matrix),
+    forward: new THREE.Vector3(0, 0, -1).transformDirection(structure.matrix),
+  }
+  let camera = createThirdPersonCameraState(actor, new THREE.Vector3())
+  camera = updateThirdPersonCamera(camera, actor, new THREE.Vector3(), {
+    height: 1.35,
+    distance: 0.8,
+    targetHeight: 0.85,
+    supportUp: actor.supportUp,
+    collider,
+  })
+  expect(
+    collider.sweepCamera(camera.position, camera.position, 0.12),
+  ).toBeNull()
+  const viewed = updateThirdPersonCamera(camera, actor, new THREE.Vector3(), {
+    height: 1.35,
+    distance: 0.8,
+    targetHeight: 0.85,
+    supportUp: actor.supportUp,
+    collider,
+    viewTarget: structure.toWorld(new THREE.Vector3(0, 2.29, -0.15)),
+  })
+  expect(viewed.mode).toBe("view")
+  expect(viewed.hideTraveler).toBe(true)
+  expect(structure.toLocal(viewed.position).y).toBeCloseTo(1.37)
+  expect(
+    viewed.target.distanceTo(
+      structure.toWorld(new THREE.Vector3(0, 2.29, -0.15)),
+    ),
+  ).toBeLessThan(1e-8)
+})
+
+it("uses hysteresis for close eye fallback and retains the last safe pose when even the eye is invalid", () => {
+  const actor = traveler(0),
+    initial = createThirdPersonCameraState(actor, new THREE.Vector3())
+  const sweepCamera = vi.fn((from: THREE.Vector3, to: THREE.Vector3) =>
+    from.equals(to)
+      ? null
+      : { time: 0.03, normal: new THREE.Vector3(0, 0, 1), id: "wall" },
+  )
+  const config = {
+    height: 1.35,
+    distance: 0.8,
+    targetHeight: 0.85,
+    collider: { sweepCamera },
+  }
+  const eye = updateThirdPersonCamera(
+    initial,
+    actor,
+    new THREE.Vector3(),
+    config,
+  )
+  expect(eye.mode).toBe("eye")
+  expect(eye.hideTraveler).toBe(true)
+  sweepCamera.mockImplementation(() => ({
+    time: 0,
+    normal: new THREE.Vector3(0, 0, 1),
+    id: "wall",
+  }))
+  const blocked = updateThirdPersonCamera(
+    eye,
+    actor,
+    new THREE.Vector3(),
+    config,
+  )
+  expect(blocked.mode).toBe("blocked")
+  expect(blocked.position).toEqual(eye.position)
+  sweepCamera.mockImplementation(() => null)
+  const free = updateThirdPersonCamera(eye, actor, new THREE.Vector3(), config)
+  expect(free.mode).toBe("walking")
+  expect(free.hideTraveler).toBe(false)
+})
+it("sweeps the previous position during fast turns and never passes through the rear wall", () => {
+  const structure = createSkyspaceStructure(),
+    collider = createSkyspaceCollider(structure)
+  const actor = {
+    ...traveler(0),
+    position: structure.toWorld(new THREE.Vector3(0.8, 0.12, -1)),
+    supportUp: new THREE.Vector3(0, 1, 0).transformDirection(structure.matrix),
+    forward: new THREE.Vector3(0, 0, 1).transformDirection(structure.matrix),
+  }
+  let camera = createThirdPersonCameraState(actor, new THREE.Vector3())
+  for (let i = 0; i < 100; i++) {
+    camera = applyCameraLook(camera, { x: i % 2 ? 1 : -1, y: 1 }, 0.1, 0.35)
+    camera = updateThirdPersonCamera(camera, actor, new THREE.Vector3(), {
+      height: 1.35,
+      distance: 0.8,
+      targetHeight: 0.85,
+      supportUp: actor.supportUp,
+      collider,
+    })
+    expect(
+      collider.sweepCamera(camera.position, camera.position, 0.12),
+    ).toBeNull()
+  }
+})
+
+it("keeps manual yaw relative to the actor without redraw accumulation or face-on turns", () => {
+  const actor = traveler(0)
+  let camera = createThirdPersonCameraState(actor, new THREE.Vector3())
+  camera.yaw = 1e-7
+  camera = updateThirdPersonCamera(camera, actor, new THREE.Vector3())
+  const pose = camera.position.clone()
+  for (let i = 0; i < 60; i++)
+    camera = updateThirdPersonCamera(camera, actor, new THREE.Vector3())
+  expect(camera.position.distanceTo(pose)).toBeLessThan(1e-12)
+  actor.forward.applyAxisAngle(camera.up, Math.PI)
+  camera = updateThirdPersonCamera(camera, actor, new THREE.Vector3())
+  expect(
+    camera.position.clone().sub(actor.position).dot(actor.forward),
+  ).toBeLessThan(-4)
+  expect(camera.yaw).toBe(1e-7)
+})
+
+it("rechecks the final distance after the history sweep and recovers from blocked history", () => {
+  const actor = traveler(0)
+  const initial = createThirdPersonCameraState(actor, new THREE.Vector3())
+  const target = actor.position.clone().addScaledVector(initial.up, 2)
+  initial.position = target.clone().addScaledVector(actor.forward, -0.2)
+  initial.mode = "walking"
+  const sweepCamera = vi.fn((from: THREE.Vector3, to: THREE.Vector3) =>
+    !from.equals(to) && from.equals(initial.position)
+      ? { time: 0.01, normal: actor.forward.clone(), id: "history-wall" }
+      : null,
+  )
+  const config = {
+    height: 2,
+    targetHeight: 2,
+    distance: 1,
+    collider: { sweepCamera },
+  }
+  const eye = updateThirdPersonCamera(
+    initial,
+    actor,
+    new THREE.Vector3(),
+    config,
+  )
+  expect(eye.mode).toBe("eye")
+  expect(eye.hideTraveler).toBe(true)
+  const recovered = updateThirdPersonCamera(
+    { ...initial, mode: "blocked" },
+    actor,
+    new THREE.Vector3(),
+    config,
+  )
+  expect(recovered.mode).toBe("walking")
+  expect(recovered.hideTraveler).toBe(false)
+})
+
+it("rejects avatar intersection and history stranded ahead of movement even with free walls", () => {
+  const actor = traveler(0)
+  const previous = createThirdPersonCameraState(actor, new THREE.Vector3())
+  const config = {
+    height: 0.85,
+    targetHeight: 0.85,
+    distance: 0.45,
+    collider: { sweepCamera: () => null },
+  }
+  expect(
+    updateThirdPersonCamera(previous, actor, new THREE.Vector3(), config).mode,
+  ).toBe("eye")
+  previous.position = actor.position
+    .clone()
+    .addScaledVector(previous.up, 1.35)
+    .add(actor.forward)
+  const stranded = updateThirdPersonCamera(
+    previous,
+    actor,
+    new THREE.Vector3(),
+    {
+      ...config,
+      height: 1.35,
+      distance: 0.8,
+      collider: {
+        sweepCamera: (from, to) =>
+          !from.equals(to) && from.equals(previous.position)
+            ? { time: 0, normal: actor.forward.clone(), id: "history-wall" }
+            : null,
+      },
+    },
+  )
+  expect(stranded.mode).toBe("eye")
+  expect(
+    stranded.target.clone().sub(stranded.position).dot(actor.forward),
+  ).toBeCloseTo(1)
+})
+
+it("uses distinct .40 entry and .50 exit distances without flickering or leaking compact visibility", () => {
+  const actor = traveler(0)
+  let camera = createThirdPersonCameraState(actor, new THREE.Vector3())
+  const config = {
+    height: 2,
+    targetHeight: 2,
+    distance: 0.39,
+    collider: { sweepCamera: () => null },
+  }
+  camera = updateThirdPersonCamera(camera, actor, new THREE.Vector3(), config)
+  expect(camera.mode).toBe("eye")
+  camera = updateThirdPersonCamera(camera, actor, new THREE.Vector3(), {
+    ...config,
+    distance: 0.45,
+  })
+  expect(camera.mode).toBe("eye")
+  camera = updateThirdPersonCamera(camera, actor, new THREE.Vector3(), {
+    ...config,
+    distance: 0.51,
+    hideTraveler: true,
+  })
+  expect(camera.mode).toBe("walking")
+  expect(camera.hideTraveler).toBe(true)
+  camera = updateThirdPersonCamera(camera, actor, new THREE.Vector3(), {
+    ...config,
+    distance: 0.45,
+  })
+  expect(camera.mode).toBe("walking")
+  expect(camera.hideTraveler).toBe(false)
 })

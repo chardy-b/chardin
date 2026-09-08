@@ -12,27 +12,94 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-it("finishes queued drawing before one page screenshot, without element stabilization", async () => {
+function manualCapture() {
   const calls: string[] = []
-  const bytes = Buffer.from("frame")
-  const evaluate = vi.fn(async () => {
-    calls.push("finish")
+  const canvas = document.createElement("canvas")
+  document.body.append(canvas)
+  const finish = vi.fn(() => calls.push("finish"))
+  vi.spyOn(canvas, "getContext").mockReturnValue({
+    finish,
+  } as unknown as WebGL2RenderingContext)
+  const evaluate = vi.fn(async (callback: typeof finishWebGLFrame) => {
+    callback(canvas)
   })
-  const screenshot = vi.fn(async () => {
-    calls.push("capture")
-    return bytes
+  const step = vi.fn()
+  vi.stubGlobal("__CHARDIN_TEST__", { step })
+  const raf = vi.fn((callback: FrameRequestCallback) => {
+    calls.push("presentation")
+    callback(0)
+    return 1
   })
-  const elementScreenshot = vi.fn()
+  vi.stubGlobal("requestAnimationFrame", raf)
+  // Opaque mocked screenshot output; never used as review evidence.
+  const bytes = Buffer.from("mock page screenshot")
   const page = {
-    locator: vi.fn(() => ({ evaluate, screenshot: elementScreenshot })),
-    screenshot,
-  } as unknown as Page
-  expect(await captureManualFrame(page)).toBe(bytes)
-  expect(calls).toEqual(["finish", "capture"])
-  expect(evaluate).toHaveBeenCalledExactlyOnceWith(finishWebGLFrame)
-  expect(screenshot).toHaveBeenCalledExactlyOnceWith({ animations: "disabled" })
-  expect(elementScreenshot).not.toHaveBeenCalled()
+    locator: vi.fn(() => ({ evaluate })),
+    evaluate: vi.fn(async (callback: () => Promise<void>) => callback()),
+    screenshot: vi.fn(async () => {
+      calls.push("screenshot")
+      return bytes
+    }),
+  }
+  const capture = () => captureManualFrame(page as unknown as Page)
+  return { page, calls, evaluate, step, raf, bytes, capture }
+}
+
+it("awaits finish -> one presentation barrier -> full viewport screenshot without simulation", async () => {
+  const { page, calls, evaluate, step, raf, bytes, capture } = manualCapture()
+  let present!: FrameRequestCallback
+  const requested = new Promise<void>((resolve) => {
+    raf.mockImplementationOnce((callback) => {
+      present = callback
+      resolve()
+      return 1
+    })
+  })
+  const result = capture()
+  await requested
+  expect(calls).toEqual(["finish"])
+  expect(page.screenshot).not.toHaveBeenCalled()
+  calls.push("presentation")
+  present(0)
+  expect(await result).toBe(bytes)
+  expect(calls).toEqual(["finish", "presentation", "screenshot"])
+  expect(page.locator).toHaveBeenCalledExactlyOnceWith("canvas")
+  expect(evaluate).toHaveBeenCalledExactlyOnceWith(
+    finishWebGLFrame,
+    undefined,
+    { timeout: 10_000 },
+  )
+  expect(page.evaluate).toHaveBeenCalledOnce()
+  expect(raf).toHaveBeenCalledOnce()
+  expect(page.screenshot).toHaveBeenCalledExactlyOnceWith({
+    animations: "allow",
+    scale: "css",
+    fullPage: false,
+    timeout: 30_000,
+  })
+  expect(step).not.toHaveBeenCalled()
 })
+
+it.each(["finish", "presentation", "screenshot"] as const)(
+  "propagates %s failure without continuing or retrying",
+  async (stage) => {
+    const { page, evaluate, step, capture } = manualCapture()
+    const error = new Error(`${stage} failed`)
+    const operation = {
+      finish: evaluate,
+      presentation: page.evaluate,
+      screenshot: page.screenshot,
+    }[stage]
+    operation.mockRejectedValueOnce(error)
+    await expect(capture()).rejects.toBe(error)
+    expect(evaluate).toHaveBeenCalledOnce()
+    expect(page.evaluate).toHaveBeenCalledTimes(stage === "finish" ? 0 : 1)
+    expect(page.screenshot).toHaveBeenCalledTimes(
+      stage === "screenshot" ? 1 : 0,
+    )
+    expect(step).not.toHaveBeenCalled()
+  },
+)
 
 function worldCapture(pixels: Uint8Array) {
   const calls: string[] = []

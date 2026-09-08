@@ -152,6 +152,9 @@ export function createTravelerView(
     dispose() {
       if (disposed) return
       disposed = true
+      // Visibility belongs to this outer owner, across fallback/model swaps.
+      // Release transient camera suppression even when disposed in eye view.
+      object.visible = true
       settle()
       controller.abort()
       mixer?.stopAllAction()

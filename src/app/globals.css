@@ -347,3 +347,226 @@ select:focus-visible {
   align-items: center;
   min-height: 44px;
 }
+
+/* Original pavilion HTML alternative; all controls use opaque semantic surfaces. */
+:root {
+  --pavilion-sky-neutral: #bfcfd1;
+  --pavilion-sky-blue: #adc5d3;
+  --pavilion-wall-neutral: #ada89c;
+  --pavilion-wall-warm: #bea58c;
+  --pavilion-wall-cool: #9fada9;
+  --control-border: #62706a;
+}
+.world-canvas {
+  touch-action: auto;
+}
+.experience-actions {
+  flex-wrap: wrap;
+  max-width: calc(100% - 12rem);
+  justify-content: end;
+}
+.experience-actions button,
+.pause-actions button,
+.pavilion-buttons button,
+.description-panel > button {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--control-border);
+  background: var(--paper);
+  color: var(--ink);
+}
+.pavilion-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pavilion-buttons button,
+.description-panel > button {
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.35rem;
+  font: inherit;
+  cursor: pointer;
+}
+.pavilion-buttons button:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+.sky-panel {
+  position: absolute;
+  top: 9rem;
+  left: clamp(1.25rem, 3vw, 2.5rem);
+  width: min(20rem, calc(100vw - 2.5rem));
+  max-height: calc(100dvh - 18rem);
+  overflow: auto;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--control-border);
+  border-radius: 0.4rem;
+  padding: 0.65rem;
+  font-size: 0.8rem;
+  z-index: 2;
+}
+.sky-panel summary {
+  min-height: 44px;
+  display: list-item;
+  align-content: center;
+  cursor: pointer;
+}
+.sky-panel p {
+  line-height: 1.5;
+}
+.description-panel {
+  position: absolute;
+  z-index: 5;
+  inset: 8rem 1rem auto;
+  margin-inline: auto;
+  width: min(36rem, calc(100% - 2rem));
+  max-height: calc(100dvh - 10rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 1.25rem;
+  border: 1px solid var(--control-border);
+  border-radius: 0.4rem;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.6;
+}
+.description-panel[hidden] {
+  display: none;
+}
+.description-panel h2,
+.description-panel h3 {
+  font-family: Georgia, serif;
+  font-weight: 400;
+}
+.description-panel ol {
+  padding-inline-start: 1.4rem;
+}
+.pavilion-swatch {
+  padding: 1.5rem;
+  height: 8rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--control-border);
+}
+.pavilion-swatch span {
+  display: block;
+  width: 55%;
+  height: 100%;
+  clip-path: polygon(5% 0, 100% 18%, 85% 100%, 20% 100%);
+}
+.wall-neutral {
+  background: var(--pavilion-wall-neutral);
+}
+.wall-warm {
+  background: var(--pavilion-wall-warm);
+}
+.wall-cool {
+  background: var(--pavilion-wall-cool);
+}
+.sky-neutral {
+  background: var(--pavilion-sky-neutral);
+}
+.sky-blue {
+  background: var(--pavilion-sky-blue);
+}
+.help-panel {
+  z-index: 5;
+  max-height: calc(100dvh - 11rem);
+  overflow: auto;
+  background: var(--paper);
+}
+.help-panel p + p {
+  opacity: 1;
+}
+.pause-actions {
+  flex-wrap: wrap;
+}
+.lifecycle > section {
+  max-height: calc(100dvh - 12rem);
+  overflow: auto;
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px var(--paper);
+}
+@media (max-width: 600px) {
+  .brand-lockup {
+    top: 1rem;
+    left: 1rem;
+  }
+  .experience-actions {
+    top: 0.5rem;
+    bottom: auto;
+    right: 0.5rem;
+    max-width: calc(100% - 8rem);
+    gap: 0.25rem;
+  }
+  .experience-actions button {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+  .quality-control {
+    top: 6.5rem;
+    left: 1rem;
+  }
+  .sky-panel {
+    top: 10rem;
+    left: 1rem;
+    max-height: calc(100dvh - 19rem);
+  }
+  .description-panel {
+    top: 6.5rem;
+    max-height: calc(100dvh - 8rem);
+  }
+  .help-panel {
+    top: 6.5rem;
+    bottom: auto;
+    max-height: calc(100dvh - 8rem);
+  }
+  .status-line {
+    bottom: calc(9rem + env(safe-area-inset-bottom));
+  }
+  .touch-cluster {
+    gap: 0.25rem;
+  }
+  .touch-cluster-right {
+    max-width: 11rem;
+  }
+  .touch-stick {
+    width: 72px;
+    height: 72px;
+  }
+}
+@media (max-height: 500px) {
+  .sky-panel {
+    top: 8.5rem;
+    max-height: calc(100dvh - 10rem);
+  }
+  .description-panel,
+  .help-panel {
+    top: 4rem;
+    max-height: calc(100dvh - 5rem);
+  }
+  .lifecycle > section {
+    max-height: calc(100dvh - 7rem);
+  }
+}
+
+.pavilion-availability {
+  position: absolute;
+  left: 1rem;
+  bottom: calc(12rem + env(safe-area-inset-bottom));
+  width: min(20rem, calc(100% - 2rem));
+  padding: 0.75rem;
+  z-index: 2;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--control-border);
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}

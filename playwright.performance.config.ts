@@ -7,7 +7,7 @@ const evidence = playwrightEvidence("performance")
 
 export default defineConfig({
   testDir: "./tests/performance",
-  testMatch: "*.spec.ts",
+  testMatch: "chardin.performance.spec.ts",
   outputDir: evidence.outputDir,
   workers: 1,
   retries: 0,

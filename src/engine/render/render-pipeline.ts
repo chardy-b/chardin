@@ -1,4 +1,5 @@
 import * as THREE from "three"
+import type { LightFrame } from "@/engine/world/sky-controller"
 import {
   BloomEffect,
   EffectComposer,
@@ -160,6 +161,11 @@ export function createRenderPipeline(
     })
     return {
       ready,
+      applyLightFrame(frame: Pick<LightFrame, "exposure">) {
+        if (disposed) return
+        if (frame.exposure !== 1.05) throw new Error("Invalid light exposure")
+        renderer.toneMappingExposure = frame.exposure
+      },
       configure(quality: Quality, reducedMotion: boolean, deviceDpr: number) {
         if (disposed) return
         const settings = renderingSettings(quality, deviceDpr, reducedMotion)
