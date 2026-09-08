@@ -11,8 +11,9 @@ import {
   PLANET_RADIUS,
   PLANET_SEED,
   SPAWN_CLEARING_ANGLE,
+  createPlanetSurfaceSampler,
   createTerrainGeometry,
-  samplePlanetSurface,
+  type PlanetSurfaceSample,
   type PlanetProfile,
 } from "@/engine/world/planet"
 
@@ -97,9 +98,12 @@ export function createGrass({
   const footprintAngle = MAX_FOOTPRINT / PLANET_RADIUS
   const goldenAngle = Math.PI * (3 - Math.sqrt(5))
   const surfaceGeometry = createTerrainGeometry(profile)
-  const surfaceMesh = new THREE.Mesh(surfaceGeometry)
-  surfaceMesh.position.copy(center)
-  surfaceMesh.updateMatrixWorld(true)
+  const surfaceSampler = createPlanetSurfaceSampler(surfaceGeometry, center)
+  const surface: PlanetSurfaceSample = {
+    radius: PLANET_RADIUS,
+    normal: new THREE.Vector3(),
+    position: new THREE.Vector3(),
+  }
   let accepted = 0
   let candidate = 0
   while (accepted < safeCount && candidate < safeCount * 8 + 32) {
@@ -120,7 +124,7 @@ export function createGrass({
     )
       continue
 
-    const surface = samplePlanetSurface(surfaceMesh, direction)
+    surfaceSampler.sample(direction, surface)
     const frame = createSurfaceFrame(
       center,
       surface.position,

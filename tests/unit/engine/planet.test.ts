@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from "vitest"
 import {
   PLANET_PROFILES,
   PLANET_RADIUS,
+  createPlanetSurfaceSampler,
   createPlanet,
+  createTerrainGeometry,
   samplePlanetSurface,
 } from "@/engine/world/planet"
 import { createGrass } from "@/engine/world/grass"
@@ -78,6 +80,64 @@ describe("authored planet", () => {
     planet.dispose()
   })
 
+  it.each(["low", "medium", "high"] as const)(
+    "matches Raycaster across %s face interiors, edges, vertices and seeded directions",
+    (profile) => {
+      const geometry = createTerrainGeometry(profile)
+      const center = new THREE.Vector3(3, -4, 2)
+      const mesh = new THREE.Mesh(geometry)
+      mesh.position.copy(center)
+      mesh.updateMatrixWorld(true)
+      const sampler = createPlanetSurfaceSampler(geometry, center)
+      const positions = geometry.getAttribute("position")
+      const directions: THREE.Vector3[] = []
+      let state = 121
+      const seeded = () => {
+        state = Math.imul(state ^ (state >>> 16), 0x45d9f3b)
+        return ((state >>> 0) / 4_294_967_296) * 2 - 1
+      }
+
+      for (
+        let offset = 0;
+        offset < Math.min(positions.count, 30);
+        offset += 3
+      ) {
+        const a = new THREE.Vector3().fromBufferAttribute(positions, offset)
+        const b = new THREE.Vector3().fromBufferAttribute(positions, offset + 1)
+        const c = new THREE.Vector3().fromBufferAttribute(positions, offset + 2)
+        directions.push(
+          a.clone().add(b).add(c).normalize(),
+          a.clone().add(b).normalize(),
+          a.clone().normalize(),
+        )
+      }
+      for (let index = 0; index < 64; index += 1)
+        directions.push(
+          new THREE.Vector3(seeded(), seeded(), seeded()).normalize(),
+        )
+
+      const raycaster = new THREE.Raycaster()
+      for (const direction of directions) {
+        raycaster.set(
+          center.clone().addScaledVector(direction, PLANET_RADIUS + 1),
+          direction.clone().negate(),
+        )
+        const expected = raycaster.intersectObject(mesh, false)[0]
+        const actual = sampler.sample(direction)
+        if (expected)
+          expect(actual.position.distanceTo(expected.point)).toBeLessThan(1e-5)
+        else {
+          // Three's triangle inclusion can reject rays exactly on shared
+          // edges/vertices; the convex surface remains continuous there.
+          expect(actual.radius).toBeGreaterThan(4.9)
+          expect(actual.radius).toBeLessThanOrEqual(PLANET_RADIUS)
+        }
+        expect(actual.normal.dot(direction)).toBeGreaterThan(0.98)
+      }
+      geometry.dispose()
+    },
+  )
+
   it("keeps every profile bounded and disposes resources idempotently", () => {
     for (const [name, profile] of Object.entries(PLANET_PROFILES)) {
       const planet = createPlanet({
@@ -100,6 +160,14 @@ describe("authored planet", () => {
 })
 
 describe("instanced grass", () => {
+  it("generates grass without general-purpose scene raycasts", () => {
+    const raycast = vi.spyOn(THREE.Raycaster.prototype, "intersectObject")
+    const grass = createGrass({ seed: 121, profile: "high" })
+    expect(raycast).not.toHaveBeenCalled()
+    grass.dispose()
+    raycast.mockRestore()
+  })
+
   it("is reproducible, seed-sensitive, radially seated and outward at both poles", () => {
     const first = createGrass({ seed: 121, profile: "high" })
     const repeat = createGrass({ seed: 121, profile: "high" })

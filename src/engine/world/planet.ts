@@ -48,34 +48,96 @@ function faceColor(normal: THREE.Vector3, seed: number, face: number) {
   )
 }
 
+export type PlanetSurfaceSample = {
+  radius: number
+  normal: THREE.Vector3
+  position: THREE.Vector3
+}
+
+/**
+ * Builds a bounded radial query for the immutable, centered, convex and
+ * non-indexed icosphere returned by createTerrainGeometry. Each triangle is a
+ * supporting plane, so the first surface along a center-out ray is the minimum
+ * positive plane intersection. This avoids scene traversal and raycast result
+ * allocation while retaining the rendered facets as the source of truth.
+ */
+export function createPlanetSurfaceSampler(
+  geometry: THREE.BufferGeometry,
+  center = new THREE.Vector3(),
+) {
+  const positions = geometry.getAttribute("position")
+  const faceCount = Math.floor(positions.count / 3)
+  const normals = new Float64Array(faceCount * 3)
+  const constants = new Float64Array(faceCount)
+  const a = new THREE.Vector3()
+  const b = new THREE.Vector3()
+  const c = new THREE.Vector3()
+  const edge = new THREE.Vector3()
+  const normal = new THREE.Vector3()
+
+  for (let face = 0; face < faceCount; face += 1) {
+    const offset = face * 3
+    a.fromBufferAttribute(positions, offset)
+    b.fromBufferAttribute(positions, offset + 1)
+    c.fromBufferAttribute(positions, offset + 2)
+    normal.subVectors(c, b).cross(edge.subVectors(a, b)).normalize()
+    if (normal.dot(a) < 0) normal.negate()
+    normals.set(normal.toArray(), offset)
+    constants[face] = normal.dot(a)
+  }
+
+  const origin = center.clone()
+  return {
+    faceCount,
+    sample(
+      direction: THREE.Vector3,
+      target: PlanetSurfaceSample = {
+        radius: PLANET_RADIUS,
+        normal: new THREE.Vector3(),
+        position: new THREE.Vector3(),
+      },
+    ) {
+      const lengthSq = direction.lengthSq()
+      const dx =
+        lengthSq > 1e-12 ? direction.x / Math.sqrt(lengthSq) : SPAWN_DIRECTION.x
+      const dy =
+        lengthSq > 1e-12 ? direction.y / Math.sqrt(lengthSq) : SPAWN_DIRECTION.y
+      const dz =
+        lengthSq > 1e-12 ? direction.z / Math.sqrt(lengthSq) : SPAWN_DIRECTION.z
+      let radius = Number.POSITIVE_INFINITY
+      let selected = -1
+      for (let face = 0; face < faceCount; face += 1) {
+        const offset = face * 3
+        const denominator =
+          normals[offset]! * dx +
+          normals[offset + 1]! * dy +
+          normals[offset + 2]! * dz
+        if (denominator <= 0) continue
+        const distance = constants[face]! / denominator
+        if (distance < radius) {
+          radius = distance
+          selected = offset
+        }
+      }
+      if (selected < 0) {
+        radius = PLANET_RADIUS
+        target.normal.set(dx, dy, dz)
+      } else {
+        target.normal.fromArray(normals, selected)
+      }
+      target.radius = radius
+      target.position.set(dx, dy, dz).multiplyScalar(radius).add(origin)
+      return target
+    },
+  }
+}
+
 export function samplePlanetSurface(
   mesh: THREE.Mesh<THREE.BufferGeometry>,
   direction: THREE.Vector3,
 ) {
   const center = mesh.position
-  const normal =
-    direction.lengthSq() > 1e-12
-      ? direction.clone().normalize()
-      : SPAWN_DIRECTION.clone()
-  mesh.updateMatrixWorld(true)
-  const raycaster = new THREE.Raycaster(
-    center.clone().addScaledVector(normal, PLANET_RADIUS + 1),
-    normal.clone().negate(),
-    0,
-    PLANET_RADIUS + 2,
-  )
-  const hit = raycaster.intersectObject(mesh, false)[0]
-  const position =
-    hit?.point ?? center.clone().addScaledVector(normal, PLANET_RADIUS)
-  const surfaceNormal = hit?.face?.normal
-    .clone()
-    .transformDirection(mesh.matrixWorld)
-    .normalize()
-  return {
-    radius: position.distanceTo(center),
-    normal: surfaceNormal ?? normal,
-    position,
-  }
+  return createPlanetSurfaceSampler(mesh.geometry, center).sample(direction)
 }
 
 export function createTerrainGeometry(profile: PlanetProfile = "medium") {
