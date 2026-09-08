@@ -341,3 +341,9 @@ select:focus-visible {
     top: 4.5rem;
   }
 }
+
+.failure-panel a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}

@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "playwright-report/**",
     "test-results/**",
+    // Generated execution evidence, including retained source snapshots.
+    ".hermes/**",
     "next-env.d.ts",
   ]),
 ])

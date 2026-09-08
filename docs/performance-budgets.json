@@ -1,0 +1,18 @@
+{
+  "status": "cost-budgets-await-first-measurement-and-review",
+  "desktop-high": {
+    "frameMs": 16.666666666666668,
+    "drawCalls": null,
+    "triangles": null,
+    "textureBytes": null,
+    "startupMs": null
+  },
+  "mobile-emulation-low": {
+    "frameMs": 33.333333333333336,
+    "drawCalls": null,
+    "triangles": null,
+    "textureBytes": null,
+    "startupMs": null
+  },
+  "bundle": { "javascriptGzipBytes": null, "loadedAssetBytes": null }
+}

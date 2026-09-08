@@ -1,12 +1,16 @@
+import { playwrightEvidence } from "./scripts/lib/playwright-evidence.mjs"
 import { defineConfig, devices } from "@playwright/test"
+
+const evidence = playwrightEvidence("browser")
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  outputDir: evidence.outputDir,
   fullyParallel: false,
   workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
+  reporter: evidence.reporter,
   expect: { toHaveScreenshot: { maxDiffPixels: 0, threshold: 0 } },
   use: {
     launchOptions: {

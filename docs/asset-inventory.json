@@ -1,0 +1,174 @@
+{
+  "schema": 1,
+  "scope": "Tracked public assets, favicon and visual baselines. Dependency notices are separate. Hashes establish inventory integrity, not copyright clearance.",
+  "entries": [
+    {
+      "path": "public/file.svg",
+      "bytes": 391,
+      "sha256": "2b67812c325c199a02536cdbeea0c593a72f707d323b72ee3e08dbab06753bd4",
+      "source": "Inherited Atlas/Next.js template; exact upstream asset license/trademark review pending",
+      "rights": "unresolved-legacy-asset"
+    },
+    {
+      "path": "public/globe.svg",
+      "bytes": 1035,
+      "sha256": "b614b9bf183925957661ac851498fe1d8029fd43a62fbfed86f9e2624a57e7cf",
+      "source": "Inherited Atlas/Next.js template; exact upstream asset license/trademark review pending",
+      "rights": "unresolved-legacy-asset"
+    },
+    {
+      "path": "public/models/traveler.glb",
+      "bytes": 47532,
+      "sha256": "ab25f66b2b2b3513cf06c9f5e819ee7ca81bc23ef977eacae39f54583c818e1a",
+      "source": "Original primitive generator scripts/generate-traveler.mjs; public/models/README.md",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "public/moodboard/bruno-simon.webp",
+      "bytes": 16452,
+      "sha256": "5852467ed1680130f4d5e6dc1a538a10234b09d0122b775916da40ec09ee0b81",
+      "source": "Official Three.js showcase derivatives; docs/mood-board-provenance.md",
+      "rights": "unresolved-third-party-redistribution"
+    },
+    {
+      "path": "public/moodboard/cyber-ocean.webp",
+      "bytes": 8228,
+      "sha256": "796a719aa59c235559c49348cba90c4e7a31192bfe55b9e46643eb7d0e563fa3",
+      "source": "Official Three.js showcase derivatives; docs/mood-board-provenance.md",
+      "rights": "unresolved-third-party-redistribution"
+    },
+    {
+      "path": "public/moodboard/firewood.webp",
+      "bytes": 24370,
+      "sha256": "0cb753ca52ca9399345284935d956a116e9322488df355a6a537ecf911a5212b",
+      "source": "Official Three.js showcase derivatives; docs/mood-board-provenance.md",
+      "rights": "unresolved-third-party-redistribution"
+    },
+    {
+      "path": "public/moodboard/no-mercy-michel.webp",
+      "bytes": 19638,
+      "sha256": "7fae969a40308365251ade6ee195ba0f52ddefd630525772071bc5f1e05dda12",
+      "source": "Official Three.js showcase derivatives; docs/mood-board-provenance.md",
+      "rights": "unresolved-third-party-redistribution"
+    },
+    {
+      "path": "public/moodboard/polytrack.webp",
+      "bytes": 9048,
+      "sha256": "dc04dd7e88dfc5288c1d2fff8aefaf88fe67ac05bb1713fad0d243d3a4774a78",
+      "source": "Official Three.js showcase derivatives; docs/mood-board-provenance.md",
+      "rights": "unresolved-third-party-redistribution"
+    },
+    {
+      "path": "public/moodboard/putt-day.webp",
+      "bytes": 9638,
+      "sha256": "f6391ac718e4b9b1f084679bc79fcecf74f47132b2e16919d0df43abf0baccd2",
+      "source": "Official Three.js showcase derivatives; docs/mood-board-provenance.md",
+      "rights": "unresolved-third-party-redistribution"
+    },
+    {
+      "path": "public/moodboard/slow-roads.webp",
+      "bytes": 6386,
+      "sha256": "97d3cfbea43edbcbb27b7ae644341993407b11019e1f5abe6fa8625abee4b952",
+      "source": "Official Three.js showcase derivatives; docs/mood-board-provenance.md",
+      "rights": "unresolved-third-party-redistribution"
+    },
+    {
+      "path": "public/moodboard/snookersim.webp",
+      "bytes": 8400,
+      "sha256": "17d178101862086cdc948c9b79b11bea0cdb9b0e3bb7a6ed86aa42dd44594ae6",
+      "source": "Official Three.js showcase derivatives; docs/mood-board-provenance.md",
+      "rights": "unresolved-third-party-redistribution"
+    },
+    {
+      "path": "public/moodboard/softbodies.webp",
+      "bytes": 20298,
+      "sha256": "d94a9087e1be04aaa3a265f117059e32955629e5074375abd51d5f02dd9fac0d",
+      "source": "Official Three.js showcase derivatives; docs/mood-board-provenance.md",
+      "rights": "unresolved-third-party-redistribution"
+    },
+    {
+      "path": "public/moodboard/three-doom.webp",
+      "bytes": 29856,
+      "sha256": "3944e8da755c9b11edfaa3ab51350500d4b7b2b80002763cb601f520ebb4db73",
+      "source": "Official Three.js showcase derivatives; docs/mood-board-provenance.md",
+      "rights": "unresolved-third-party-redistribution"
+    },
+    {
+      "path": "public/moodboard/tiny-skies.webp",
+      "bytes": 18272,
+      "sha256": "92f57abff46a8ffa5c128a1b86ac652e734f8ca7ce5862eadafbb1e36b7bf767",
+      "source": "Official Three.js showcase derivatives; docs/mood-board-provenance.md",
+      "rights": "unresolved-third-party-redistribution"
+    },
+    {
+      "path": "public/moodboard/wind-waker.webp",
+      "bytes": 21014,
+      "sha256": "83e963f885ca1f4946eddb4af56ca543cebd6264907e1a03e8015c02f77ca18c",
+      "source": "Official Three.js showcase derivatives; docs/mood-board-provenance.md",
+      "rights": "unresolved-third-party-redistribution"
+    },
+    {
+      "path": "public/next.svg",
+      "bytes": 1375,
+      "sha256": "55995dfad6ecb4945a1e856ddca03c5e16aa5bf13fd21b4df6a74ae79357bcfc",
+      "source": "Inherited Atlas/Next.js template; exact upstream asset license/trademark review pending",
+      "rights": "unresolved-legacy-asset"
+    },
+    {
+      "path": "public/vercel.svg",
+      "bytes": 128,
+      "sha256": "f081337b2fee635b455b63275406a3e7f39d6a014e25ad90dab5a67e62a12ac4",
+      "source": "Inherited Atlas/Next.js template; exact upstream asset license/trademark review pending",
+      "rights": "unresolved-legacy-asset"
+    },
+    {
+      "path": "public/window.svg",
+      "bytes": 385,
+      "sha256": "644768c4aaeb4767bce293344eeb0c125fb804a94d801440424072202d85e3a1",
+      "source": "Inherited Atlas/Next.js template; exact upstream asset license/trademark review pending",
+      "rights": "unresolved-legacy-asset"
+    },
+    {
+      "path": "src/app/favicon.ico",
+      "bytes": 25931,
+      "sha256": "2b8ad2d33455a8f736fc3a8ebf8f0bdea8848ad4c0db48a2833bd0f9cd775932",
+      "source": "Inherited Atlas/Next.js template; exact upstream asset license/trademark review pending",
+      "rights": "unresolved-legacy-asset"
+    },
+    {
+      "path": "tests/e2e/chardin.visual.spec.ts-snapshots/spawn-chromium-linux.png",
+      "bytes": 172950,
+      "sha256": "e267cf4fd7d2da29f8f7c5e57489ac0f3dfca904f61789060b308e663a8d1e26",
+      "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "tests/e2e/chardin.visual.spec.ts-snapshots/spawn-mobile-chromium-linux.png",
+      "bytes": 67259,
+      "sha256": "c72fbad2d3a4be04a76d2c27c053e962335307f55d6c7a848e46ecb981aa93fd",
+      "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "tests/e2e/chardin.visual.spec.ts-snapshots/tablet-chromium-linux.png",
+      "bytes": 144066,
+      "sha256": "b9c7e2ec9b8d6e7631fd8f199d7b12850b1329f8764755fb720cbde2e10a9629",
+      "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "tests/e2e/chardin.visual.spec.ts-snapshots/traveled-chromium-linux.png",
+      "bytes": 177699,
+      "sha256": "5fe45dcc0d89130a682f24ad655cd0ac04777cbffeb34d159cd95954be95ac61",
+      "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "tests/e2e/chardin.visual.spec.ts-snapshots/traveled-mobile-chromium-linux.png",
+      "bytes": 74632,
+      "sha256": "670c0e79146be3fbdff23ebc8bd6a62ee382968494bc3137f07e924349dd7bb4",
+      "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
+      "rights": "original-repository-license-undecided"
+    }
+  ]
+}

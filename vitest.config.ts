@@ -20,14 +20,17 @@ export default defineConfig({
     exclude: [
       "node_modules",
       ".next",
+      ".hermes/**",
       "tests/e2e",
+      "tests/performance",
+      "tests/production",
       "test-results",
       "playwright-report",
     ],
     coverage: {
       provider: "v8",
-      reporter: ["text", "html"],
-      reportsDirectory: "coverage",
+      reporter: ["text", "html", "json", "json-summary"],
+      reportsDirectory: process.env.CHARDIN_COVERAGE_DIR ?? "coverage",
       include: [
         "src/engine/**/*.ts",
         "src/components/experience/**/*.tsx",
@@ -51,6 +54,13 @@ export default defineConfig({
         statements: 70,
         functions: 70,
         branches: 60,
+        // Runtime regressions must not be diluted by legacy component coverage.
+        "src/engine/**/*.ts": {
+          lines: 85,
+          statements: 85,
+          functions: 85,
+          branches: 75,
+        },
       },
     },
   },
