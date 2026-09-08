@@ -84,6 +84,8 @@ export const travelerManifest = validateCharacterManifest({
     cameraFocus: "Head",
     leftHand: "LeftHand",
     rightHand: "RightHand",
+    leftFoot: "LeftAnkle",
+    rightFoot: "RightAnkle",
   },
 })
 

@@ -2,6 +2,22 @@ import type { ControlIntent } from "@/engine/contracts"
 import type { Quality } from "@/engine/quality/quality-controller"
 
 export interface TestSnapshot {
+  presentation: {
+    alpha: number
+    position: number[]
+    cameraPosition: number[]
+    cameraTarget: number[]
+  }
+  animation: { clip: string | null; phase: number; timeScale: number }
+  movement: {
+    move: { x: number; y: number }
+    run: boolean
+    signedSpeed: number
+  }
+  deviceDpr: number
+  cameraYaw: number
+  cameraPitch: number
+  cameraFov: number
   generation: number
   forward: number[]
   supportId: string
@@ -29,6 +45,8 @@ export interface TestSnapshot {
   viewport: { width: number; height: number }
 }
 export interface ChardinTestApi {
+  /** Render a bounded interpolation fraction without changing a simulation tick. */
+  present(alpha: number): void
   setSkyTick(tick: number): void
   snapshot(): TestSnapshot
   step(frames: number, intent?: Partial<ControlIntent>): void

@@ -220,6 +220,7 @@ it("updates Idle state with zero animation time under reduced motion", async () 
   expect(harness.travelerUpdate).toHaveBeenLastCalledWith(
     expect.objectContaining({ locomotion: "idle" }),
     0,
+    0,
   )
   runtime.dispose()
 })
@@ -268,6 +269,7 @@ it("applies motion event snapshots to sky, animation and quality without frames 
       expect(harness.travelerUpdate).toHaveBeenLastCalledWith(
         expect.objectContaining({ locomotion: "idle" }),
         reduced ? 0 : 1 / 60,
+        0,
       )
     }
     // Preferences still publish while paused; neither leaving reduce nor
@@ -409,5 +411,35 @@ it("traverses the real runtime route, plays deterministically, pauses on exit an
   runtime.skyCommand!("still")
   runtime.skyCommand!("freeze")
   runtime.skyCommand!("leave-view")
+  runtime.dispose()
+})
+
+it("keeps presentation hooks inert without manual mode and after disposal", async () => {
+  window.history.replaceState({}, "", "/")
+  const runtime = createThreeRuntime(
+    document.createElement("canvas"),
+    {} as WebGL2RenderingContext,
+  )
+  await runtime.ready
+  runtime.start()
+  const api = window.__CHARDIN_TEST__!
+  const before = api.snapshot()
+  harness.draw.mockClear()
+  api.present(0.5)
+  expect(harness.draw).not.toHaveBeenCalled()
+  expect(api.snapshot()).toEqual(before)
+  runtime.dispose()
+  api.present(1)
+  expect(harness.draw).not.toHaveBeenCalled()
+})
+
+it("never installs presentation or simulation hooks in an ordinary production build", async () => {
+  vi.stubEnv("NEXT_PUBLIC_E2E_HOOKS", "false")
+  const runtime = createThreeRuntime(
+    document.createElement("canvas"),
+    {} as WebGL2RenderingContext,
+  )
+  await runtime.ready
+  expect(window.__CHARDIN_TEST__).toBeUndefined()
   runtime.dispose()
 })

@@ -57,16 +57,16 @@
   "files": [
     {
       "path": "src/engine/assets/manifest.ts",
-      "bytes": 4177,
-      "sha256": "63da06dce1084dd3a0f9a4d9d342affa615a148dc27940f30e1fd088b6b724a6",
-      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
+      "bytes": 4233,
+      "sha256": "b9dfd8ceab25a1c608eece0844bdd7d27437d7795c37dd9707bdd2485bb3dbb0",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable; exterior presentation amended by WIL-145, docs/design/wil145-provenance.json",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "src/engine/world/skyspace-landmark.ts",
-      "bytes": 11901,
-      "sha256": "bcd1cb2d3a2d5539f4950cc0e626d335bf281e8f94c90a897a993fe4a15c75ab",
-      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
+      "bytes": 11913,
+      "sha256": "f380d3d62cb9b1b6f85e2503825f9618901ae6cae7fa027ce52c4db95ab425a4",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable; exterior presentation amended by WIL-145, docs/design/wil145-provenance.json",
       "rights": "original-repository-license-undecided"
     },
     {
@@ -85,11 +85,12 @@
     },
     {
       "path": "src/app/globals.css",
-      "bytes": 11301,
-      "sha256": "827f8ce3fb526ab6a685ce6f308beaaf2ea9542249e12d0ebe52e4590b24324e",
-      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable",
+      "bytes": 11111,
+      "sha256": "cadefe206cfdd3b34da5370b9920506acc61bab98e8f252980f50c72255119fc",
+      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable; exterior presentation amended by WIL-145, docs/design/wil145-provenance.json",
       "rights": "original-repository-license-undecided"
     }
   ],
-  "kind": "original procedural geometry, material parameters, light score and HTML still alternative"
+  "kind": "original procedural geometry, material parameters, light score and HTML still alternative",
+  "presentationAmendment": "WIL-145: current hashes refreshed for manifest/material/HUD edits; canonical geometry and score unchanged. Original rights decisions retained. See wil145-provenance.json."
 }

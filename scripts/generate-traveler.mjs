@@ -14,158 +14,350 @@ globalThis.FileReader ??= class FileReader {
   }
 }
 
-const material = (color) =>
-  new THREE.MeshStandardMaterial({ color, roughness: 0.93, flatShading: true })
-const palette = {
-  terracotta: material(0xa94f3d),
-  linen: material(0xdac39d),
-  ink: material(0x273335),
-  skin: material(0xb97959),
-}
+// Original ring sections, dimensions and gait keys. No imported creative input.
+const palette = Object.fromEntries(
+  Object.entries({
+    coat: 0xa75e48,
+    linen: 0xd6c7a0,
+    leather: 0x55594b,
+    skin: 0xbc8967,
+    sole: 0x424d44,
+    seam: 0x854c3c,
+  }).map(([name, color]) => [
+    name,
+    new THREE.MeshStandardMaterial({
+      name,
+      color,
+      roughness: 1,
+      metalness: 0,
+    }),
+  ]),
+)
 const root = new THREE.Group()
 root.name = "Traveler"
-function mesh(name, geometry, mat, position, parent = root) {
-  const value = new THREE.Mesh(geometry, mat)
-  value.name = name
-  value.position.set(...position)
-  parent.add(value)
-  return value
+root.userData.authoring = {
+  version: 2,
+  forward: "-Z",
+  units: "world units",
+  walk: { duration: 0.8, speed: 1.65, stance: 0.5 },
+  run: { duration: 0.52, speed: 3.3, stance: 0.34 },
+  keys: "contact, compression, passing, toe-off, airborne, reach",
+  source: "scripts/generate-traveler.mjs; first-principles original",
 }
-mesh(
-  "Boots",
-  new THREE.BoxGeometry(0.38, 0.14, 0.28),
-  palette.ink,
-  [0, 0.07, -0.035],
-)
+function group(name, position, parent = root) {
+  const node = new THREE.Group()
+  node.name = name
+  node.position.set(...position)
+  parent.add(node)
+  return node
+}
+// Elliptical ring loft, chamfered by authored shoulder/hem/crown sections.
+function loft(rings, sides = 8) {
+  const positions = [],
+    indices = []
+  for (const [y, rx, rz, z = 0] of rings)
+    for (let i = 0; i < sides; i++) {
+      const a = (2 * Math.PI * i) / sides
+      positions.push(Math.cos(a) * rx, y, Math.sin(a) * rz + z)
+    }
+  for (let r = 0; r < rings.length - 1; r++)
+    for (let i = 0; i < sides; i++) {
+      const a = r * sides + i,
+        b = r * sides + ((i + 1) % sides)
+      indices.push(a, a + sides, b, b, a + sides, b + sides)
+    }
+  for (let i = 1; i < sides - 1; i++) {
+    indices.push(0, i, i + 1)
+    const top = (rings.length - 1) * sides
+    indices.push(top, top + i + 1, top + i)
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3),
+  )
+  geometry.setIndex(indices)
+  geometry.computeVertexNormals()
+  return geometry
+}
+function mesh(name, rings, mat, parent, position = [0, 0, 0], sides = 8) {
+  const node = new THREE.Mesh(loft(rings, sides), palette[mat])
+  node.name = name
+  node.position.set(...position)
+  parent.add(node)
+  return node
+}
+const torso = group("Torso", [0, 0.62, 0])
 mesh(
   "Coat",
-  new THREE.ConeGeometry(0.34, 0.72, 6),
-  palette.terracotta,
-  [0, 0.55, 0],
+  [
+    [-0.14, 0.235, 0.155],
+    [-0.1, 0.23, 0.15],
+    [0.12, 0.165, 0.12],
+    [0.24, 0.205, 0.13],
+    [0.28, 0.115, 0.095],
+  ],
+  "coat",
+  torso,
 )
 mesh(
-  "Scarf",
-  new THREE.TorusGeometry(0.19, 0.045, 4, 8),
-  palette.linen,
-  [0, 0.84, 0],
-).rotation.x = Math.PI / 2
-const pack = mesh(
-  "Pack",
-  new THREE.BoxGeometry(0.38, 0.45, 0.16),
-  palette.ink,
-  [0, 0.57, 0.25],
+  "CoatPlacket",
+  [
+    [-0.11, 0.018, 0.008],
+    [0.24, 0.014, 0.008],
+  ],
+  "seam",
+  torso,
+  [0, 0, -0.145],
+  4,
 )
-pack.rotation.x = -0.08
+const head = group("Head", [0, 0.39, -0.015], torso)
 mesh(
-  "PackFlap",
-  new THREE.CylinderGeometry(0.19, 0.19, 0.17, 6, 1, false, 0, Math.PI),
-  palette.linen,
-  [0, 0.76, 0.25],
-)
-const head = mesh(
-  "Head",
-  new THREE.IcosahedronGeometry(0.19, 1),
-  palette.skin,
-  [0, 1.02, 0],
+  "Face",
+  [
+    [-0.085, 0.075, 0.075],
+    [-0.05, 0.12, 0.105],
+    [0.08, 0.128, 0.112],
+    [0.135, 0.09, 0.085],
+  ],
+  "skin",
+  head,
 )
 mesh(
   "Hair",
-  new THREE.CylinderGeometry(0.18, 0.2, 0.12, 7),
-  palette.ink,
-  [0, 0.14, 0],
+  [
+    [0.07, 0.13, 0.114],
+    [0.13, 0.12, 0.103],
+    [0.16, 0.06, 0.06],
+  ],
+  "leather",
   head,
+  [0, 0, 0.012],
 )
-const hood = mesh(
-  "Hood",
-  new THREE.TorusGeometry(0.2, 0.055, 4, 7, Math.PI * 1.25),
-  palette.terracotta,
-  [0, 0.02, 0.02],
-  head,
+mesh(
+  "ScarfCollar",
+  [
+    [0.265, 0.123, 0.105],
+    [0.32, 0.135, 0.115],
+  ],
+  "linen",
+  torso,
 )
-hood.rotation.z = -Math.PI * 0.62
-function limb(side) {
-  const sign = side === "Left" ? -1 : 1
-  const arm = new THREE.Group()
-  arm.name = `${side}Arm`
-  arm.position.set(sign * 0.27, 0.75, 0)
-  root.add(arm)
+const scarf = group("Scarf", [0.08, 0.28, 0.09], torso)
+mesh(
+  "ScarfTail",
+  [
+    [-0.19, 0.038, 0.012, 0.055],
+    [-0.07, 0.045, 0.014, 0.04],
+    [0, 0.04, 0.014],
+  ],
+  "linen",
+  scarf,
+  [0, 0, 0],
+  4,
+)
+const pack = group("Pack", [0, 0.04, 0.17], torso)
+mesh(
+  "PackBody",
+  [
+    [-0.13, 0.105, 0.052],
+    [-0.08, 0.145, 0.07],
+    [0.13, 0.13, 0.065],
+    [0.17, 0.095, 0.045],
+  ],
+  "leather",
+  pack,
+)
+mesh(
+  "PackFlap",
+  [
+    [0.04, 0.125, 0.018],
+    [0.15, 0.14, 0.03],
+    [0.18, 0.095, 0.02],
+  ],
+  "linen",
+  pack,
+  [0, 0, 0.055],
+)
+for (const sign of [-1, 1]) {
+  mesh(
+    `Strap${sign}`,
+    [
+      [-0.08, 0.019, 0.012],
+      [0.23, 0.019, 0.012],
+    ],
+    "linen",
+    torso,
+    [sign * 0.125, 0, 0.117],
+    4,
+  )
+}
+const L = 0.33
+for (const [side, sign] of [
+  ["Left", -1],
+  ["Right", 1],
+]) {
+  const leg = group(`${side}Leg`, [sign * 0.105, 0.62, 0])
+  mesh(
+    `${side}Trouser`,
+    [
+      [-L, 0.055, 0.052],
+      [-0.05, 0.065, 0.06],
+      [0, 0.07, 0.065],
+    ],
+    "leather",
+    leg,
+  )
+  const knee = group(`${side}Knee`, [0, -L, 0], leg)
+  mesh(
+    `${side}Shin`,
+    [
+      [-L + 0.04, 0.048, 0.046],
+      [0, 0.054, 0.052],
+    ],
+    "leather",
+    knee,
+  )
+  const ankle = group(`${side}Ankle`, [0, -L, 0], knee)
+  mesh(
+    `${side}Boot`,
+    [
+      [-0.08, 0.071, 0.115, -0.035],
+      [-0.05, 0.075, 0.12, -0.04],
+      [0.015, 0.062, 0.095, -0.035],
+      [0.06, 0.05, 0.047],
+    ],
+    "sole",
+    ankle,
+  )
+  const arm = group(`${side}Arm`, [sign * 0.205, 0.22, 0], torso)
   mesh(
     `${side}Sleeve`,
-    new THREE.CylinderGeometry(0.07, 0.06, 0.48, 5),
-    palette.terracotta,
-    [0, -0.22, 0],
+    [
+      [-0.2, 0.056, 0.052],
+      [-0.03, 0.073, 0.063],
+      [0.02, 0.06, 0.055],
+    ],
+    "coat",
     arm,
+  )
+  const elbow = group(`${side}Elbow`, [0, -0.2, 0], arm)
+  mesh(
+    `${side}Cuff`,
+    [
+      [-0.16, 0.044, 0.045],
+      [0, 0.055, 0.052],
+    ],
+    "coat",
+    elbow,
   )
   mesh(
     `${side}Hand`,
-    new THREE.IcosahedronGeometry(0.075, 0),
-    palette.skin,
-    [0, -0.48, 0],
-    arm,
-  )
-  const leg = new THREE.Group()
-  leg.name = `${side}Leg`
-  leg.position.set(sign * 0.13, 0.3, 0)
-  root.add(leg)
-  mesh(
-    `${side}Trouser`,
-    new THREE.CylinderGeometry(0.085, 0.07, 0.36, 5),
-    palette.ink,
-    [0, -0.16, 0],
-    leg,
+    [
+      [-0.055, 0.026, 0.03],
+      [0, 0.043, 0.04],
+      [0.035, 0.032, 0.035],
+    ],
+    "skin",
+    elbow,
+    [0, -0.18, 0],
   )
 }
-limb("Left")
-limb("Right")
-const times = [0, 0.25, 0.5, 0.75, 1]
 const axis = new THREE.Vector3(1, 0, 0)
-const quats = (angles) =>
-  angles.flatMap((angle) =>
-    new THREE.Quaternion().setFromAxisAngle(axis, angle).toArray(),
-  )
-const rotation = (node, angles) =>
-  new THREE.QuaternionKeyframeTrack(`${node}.quaternion`, times, quats(angles))
-function gait(name, amount) {
-  return new THREE.AnimationClip(name, 1, [
-    rotation("LeftArm", [0, amount, 0, -amount, 0]),
-    rotation("RightArm", [0, -amount, 0, amount, 0]),
-    rotation("LeftLeg", [0, -amount * 0.75, 0, amount * 0.75, 0]),
-    rotation("RightLeg", [0, amount * 0.75, 0, -amount * 0.75, 0]),
-    new THREE.VectorKeyframeTrack(
-      "Traveler.position",
-      times,
-      [0, 0, 0, 0, 0.018, 0, 0, 0, 0, 0, 0.018, 0, 0, 0, 0],
+const quat = (angle) =>
+  new THREE.Quaternion().setFromAxisAngle(axis, angle).toArray()
+function makeClip(name, duration, sample) {
+  const data = new Map(),
+    times = []
+  const samples = 64
+  for (let i = 0; i <= samples; i++) {
+    times.push((i * duration) / samples)
+    for (const [track, value] of Object.entries(sample(i / samples))) {
+      if (!data.has(track)) data.set(track, [])
+      data.get(track).push(...value)
+    }
+  }
+  return new THREE.AnimationClip(
+    name,
+    duration,
+    [...data].map(([track, values]) =>
+      track.endsWith("quaternion")
+        ? new THREE.QuaternionKeyframeTrack(track, times, values)
+        : new THREE.VectorKeyframeTrack(track, times, values),
     ),
-  ])
+  )
+}
+function pose(phase, speed, duration, stance, jump = false) {
+  const moving = speed > 0
+  const cycle = Math.sin(phase * Math.PI * 2)
+  const hip =
+    0.62 +
+    (moving
+      ? Math.cos(phase * Math.PI * 4) * 0.012
+      : Math.sin(phase * Math.PI * 2) ** 2 * 0.002)
+  const tracks = {
+    "Torso.position": [0, hip, 0],
+    "Torso.quaternion": quat(
+      moving ? -0.025 - speed * 0.016 + cycle * 0.012 : 0,
+    ),
+    "Scarf.quaternion": quat(
+      moving
+        ? -0.12 - speed * 0.02 + Math.sin(phase * Math.PI * 2 - 0.5) * 0.055
+        : 0,
+    ),
+    "Pack.quaternion": quat(
+      moving ? 0.025 * Math.sin(phase * Math.PI * 4 - 0.4) : 0,
+    ),
+  }
+  for (const [side, sign, shift] of [
+    ["Left", -1, 0],
+    ["Right", 1, 0.5],
+  ]) {
+    const p = (phase + shift) % 1
+    const stride = speed * duration * stance
+    let z = 0,
+      lift = 0
+    if (moving && p <= stance) z = -stride / 2 + speed * duration * p
+    else if (moving) {
+      const t = (p - stance) / (1 - stance)
+      const smooth = t * t * (3 - 2 * t)
+      z = stride / 2 - stride * smooth
+      lift = (speed > 2 ? 0.18 : 0.1) * Math.sin(Math.PI * t) ** 2
+    }
+    if (jump) {
+      lift = 0.11 * Math.sin(Math.PI * phase) ** 2
+      z = sign * 0.06 * Math.sin(Math.PI * phase)
+    }
+    const down = hip - (0.08 + lift)
+    const bend = Math.acos(Math.min(1, Math.hypot(down, z) / (2 * L)))
+    const thigh = Math.atan2(-z, down) + bend
+    const knee = -bend * 2
+    tracks[`${side}Leg.position`] = [sign * 0.105, hip, 0]
+    tracks[`${side}Leg.quaternion`] = quat(thigh)
+    tracks[`${side}Knee.quaternion`] = quat(knee)
+    tracks[`${side}Ankle.quaternion`] = quat(-thigh - knee)
+    tracks[`${side}Arm.quaternion`] = quat(
+      jump
+        ? -0.9 * Math.sin(Math.PI * phase)
+        : moving
+          ? z * (speed > 2 ? 2.3 : 1.6)
+          : 0.04,
+    )
+    tracks[`${side}Elbow.quaternion`] = quat(moving ? 0.12 + speed * 0.1 : 0.08)
+  }
+  return tracks
 }
 const clips = [
-  new THREE.AnimationClip("Idle", 2, [
-    new THREE.VectorKeyframeTrack(
-      "Head.position",
-      [0, 1, 2],
-      [0, 1.02, 0, 0, 1.035, 0, 0, 1.02, 0],
-    ),
-  ]),
-  gait("Walk", 0.48),
-  gait("Run", 0.82),
-  new THREE.AnimationClip("Jump", 0.7, [
-    new THREE.VectorKeyframeTrack(
-      "Traveler.position",
-      [0, 0.18, 0.42, 0.7],
-      [0, 0, 0, 0, -0.06, 0, 0, 0.05, 0, 0, 0, 0],
-    ),
-    new THREE.QuaternionKeyframeTrack(
-      "LeftArm.quaternion",
-      [0, 0.28, 0.7],
-      quats([0, -1.15, 0]),
-    ),
-    new THREE.QuaternionKeyframeTrack(
-      "RightArm.quaternion",
-      [0, 0.28, 0.7],
-      quats([0, -1.15, 0]),
-    ),
-  ]),
+  makeClip("Idle", 2, (p) => pose(p, 0, 2, 0.5)),
+  makeClip("Walk", 0.8, (p) => pose(p, 1.65, 0.8, 0.5)),
+  makeClip("Run", 0.52, (p) => pose(p, 3.3, 0.52, 0.34)),
+  makeClip("Jump", 0.7, (p) => pose(p, 0, 0.7, 0.5, true)),
 ]
+// Set the bind pose to the same supported idle key, including bent knees.
+for (const [track, value] of Object.entries(pose(0, 0, 2, 0.5))) {
+  const [name, property] = track.split(".")
+  root.getObjectByName(name)[property].fromArray(value)
+}
 const binary = await new GLTFExporter().parseAsync(root, {
   binary: true,
   animations: clips,

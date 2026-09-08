@@ -24,9 +24,10 @@ test("deterministic spawn and travel have real screenshot baselines", async ({
     "data-traveler-model",
     "loaded",
   )
-  // WIL-125 intentionally changes the visible pavilion and Light/view UI.
+  // WIL-145 intentionally reauthors meadow, traveler, framing and compact UI.
   // Keep exact comparisons: controller-reviewed replacements are required
-  // after the production regressions pass (docs/design/wil125-validation.md).
+  // after controller review (docs/design/wil145-visual-loop.md). Existing PNGs
+  // are historical expectations until that review; never loosen tolerances.
   await expect(page).toHaveScreenshot("spawn.png")
   const before = await page.evaluate(() => window.__CHARDIN_TEST__!.snapshot())
   await page.evaluate(() =>

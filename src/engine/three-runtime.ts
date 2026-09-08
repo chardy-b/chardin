@@ -22,6 +22,8 @@ import { GamepadInput } from "@/engine/input/gamepad-input"
 import { InputManager } from "@/engine/input/input-manager"
 import { KeyboardInput } from "@/engine/input/keyboard-input"
 import { TouchInput } from "@/engine/input/touch-input"
+import { createContactShadow } from "@/engine/player/contact-shadow"
+import { createPresentation } from "@/engine/player/presentation"
 import { createTravelerView } from "@/engine/player/traveler-view"
 import {
   createQualityController,
@@ -105,8 +107,8 @@ export function createThreeRuntime(
     })
     scope.defer(() => renderer.dispose())
     // An ambient floor keeps the far hemisphere legible independently of world-up.
-    scene.add(new THREE.AmbientLight(0xf3e9cd, 1.25))
-    scene.add(new THREE.HemisphereLight(0xf4f2df, 0x85937a, 1.4))
+    scene.add(new THREE.AmbientLight(0xf3e9cd, 0.65))
+    scene.add(new THREE.HemisphereLight(0xf4f2df, 0x85937a, 0.85))
     const sun = new THREE.DirectionalLight(0xffefc1, 2.4)
     sun.position.set(-5, 9, 7)
     sun.castShadow = true
@@ -119,7 +121,7 @@ export function createThreeRuntime(
       far: 30,
     })
     sun.shadow.bias = -0.0005
-    sun.shadow.normalBias = 0.025
+    sun.shadow.normalBias = 0.012
     scene.add(sun)
     scope.defer(() => sun.shadow.dispose())
     const contentStart = performance.now()
@@ -187,6 +189,16 @@ export function createThreeRuntime(
     })
     scope.defer(() => travelerView.dispose())
     scene.add(travelerView.object)
+    const contactShadow = createContactShadow()
+    scene.add(contactShadow.object)
+    scope.defer(() => contactShadow.dispose())
+    const footPoint = new THREE.Vector3()
+    const groundSample = {
+      position: new THREE.Vector3(),
+      normal: new THREE.Vector3(),
+      radius: PLANET_RADIUS,
+    }
+    const footNodes: THREE.Object3D[] = []
     const adapters = []
     let inputOwnsAdapters = false
     const ownAdapter = <T extends KeyboardInput | GamepadInput | TouchInput>(
@@ -230,6 +242,13 @@ export function createThreeRuntime(
       travelerState,
       motorConfig.planetCenter,
     )
+    let previousTraveler = travelerState
+    let previousCamera = cameraState
+    const presentation = createPresentation()
+    let windTime = 0
+    let presentationAlpha = 1
+    let signedSpeed = 0
+    let lastMovement = { move: { x: 0, y: 0 }, run: false }
     let frameIntent = emptyIntent()
     let pendingEdges = {
       jumpPressed: false,
@@ -251,18 +270,8 @@ export function createThreeRuntime(
       height: Math.max(canvas.clientHeight, 1),
     })
     scope.defer(() => pipeline.dispose())
-    const placeTravelerAndCamera = () => {
+    const resolveCamera = () => {
       const up = travelerState.supportUp
-      const right = new THREE.Vector3()
-        .crossVectors(travelerState.forward, up)
-        .normalize()
-      const basis = new THREE.Matrix4().makeBasis(
-        right,
-        up,
-        travelerState.forward.clone().negate(),
-      )
-      travelerView.object.position.copy(travelerState.position)
-      travelerView.object.quaternion.setFromRotationMatrix(basis)
       // Portrait reveals more of the curved horizon while keeping the Traveler central.
       const portrait = camera.aspect < 0.85
       const local = landmark?.structure.toLocal(travelerState.position)
@@ -281,6 +290,8 @@ export function createThreeRuntime(
           height: THREE.MathUtils.lerp(portrait ? 2.65 : 2.25, 1.35, progress),
           distance: THREE.MathUtils.lerp(portrait ? 5.5 : 4.4, 0.8, progress),
           targetHeight: THREE.MathUtils.lerp(0.65, 0.85, progress),
+          shoulder: (portrait ? 0.48 : 0.85) * (1 - progress),
+          compositionYaw: 0.42 * (1 - progress),
           supportUp: up,
           hideTraveler: progress === 1,
           collider,
@@ -289,17 +300,73 @@ export function createThreeRuntime(
             : undefined,
         },
       )
+    }
+    const placeTravelerAndCamera = (alpha: number) => {
+      presentation.traveler(
+        previousTraveler,
+        travelerState,
+        alpha,
+        motorConfig.planetCenter,
+        collider,
+      )
+      presentation.camera(previousCamera, cameraState, alpha, collider)
+      // Seat the presentation on this tier's rendered terrain; the motor keeps
+      // its invariant sphere. Ramp/floor positions remain collision-owned.
+      if (travelerState.previousGroundedSupport === "planet") {
+        content.planet.surfaceAt(presentation.position, groundSample)
+        const local = landmark?.structure.toLocal(presentation.position)
+        const seamWeight =
+          local &&
+          collider?.nearLandmark?.(presentation.position) &&
+          Math.abs(local.x) < 0.95
+            ? THREE.MathUtils.smoothstep(local.z, 3.25, 3.65)
+            : 1
+        const altitude = Math.max(
+          0,
+          presentation.position.length() - motorConfig.groundRadius,
+        )
+        const weight =
+          seamWeight * (1 - THREE.MathUtils.smoothstep(altitude, 0, 0.2))
+        presentation.position.addScaledVector(
+          presentation.up,
+          -(motorConfig.groundRadius - groundSample.radius) * weight,
+        )
+      }
+      travelerView.object.position.copy(presentation.position)
+      travelerView.object.quaternion.copy(presentation.rotation)
+      travelerView.present?.(alpha)
       travelerView.object.visible = !cameraState.hideTraveler
-      const fov = viewing ? (portrait ? 78 : 60) : 42
+      travelerView.object.updateMatrixWorld(true)
+      contactShadow.object.visible =
+        !cameraState.hideTraveler && travelerState.grounded
+      for (let i = 0; i < footNodes.length; i++) {
+        footNodes[i].getWorldPosition(footPoint)
+        const support =
+          travelerState.supportId === "planet"
+            ? null
+            : collider?.sampleSupport(footPoint, travelerState.supportId)
+        if (support) {
+          groundSample.position.copy(support.point)
+          groundSample.normal.copy(support.normal)
+        } else content.planet.surfaceAt(footPoint, groundSample)
+        contactShadow.place(
+          i,
+          groundSample.position,
+          groundSample.normal,
+          Math.max(0, footPoint.distanceTo(groundSample.position) - 0.08),
+        )
+      }
+      const fov = viewing ? (camera.aspect < 0.85 ? 78 : 60) : 42
       if (camera.fov !== fov) {
         camera.fov = fov
         camera.updateProjectionMatrix()
       }
-      camera.position.copy(cameraState.position)
-      camera.up.copy(cameraState.up)
-      camera.lookAt(cameraState.target)
+      camera.position.copy(presentation.cameraPosition)
+      camera.up.copy(presentation.cameraUp)
+      camera.lookAt(presentation.cameraTarget)
     }
-    const draw = () => {
+    const draw = (alpha = 1) => {
+      presentationAlpha = alpha
       if (disposed) return
       const light = sky.frame()
       ;(scene.background as THREE.Color).fromArray(light.sky)
@@ -309,7 +376,10 @@ export function createThreeRuntime(
       sun.position.fromArray(light.sunDirection).multiplyScalar(Math.sqrt(155))
       pipeline.applyLightFrame(light)
       landmark?.applyWall(light.wall)
-      placeTravelerAndCamera()
+      placeTravelerAndCamera(alpha)
+      if (!reducedMotion)
+        windTime = Math.max(0, simulationTime - (1 - alpha) / 60)
+      content.grass.update?.(windTime, reducedMotion)
       canvas.dataset.travelerDistance = travelerDistance.toFixed(4)
       canvas.dataset.travelerGrounded = String(travelerState.grounded)
       pipeline.render(0)
@@ -346,6 +416,8 @@ export function createThreeRuntime(
       pipeline.resize(width, height)
       camera.aspect = width / height
       camera.updateProjectionMatrix()
+      resolveCamera()
+      previousCamera = cameraState
       draw()
       renderedViewport = { width, height }
     }
@@ -357,6 +429,8 @@ export function createThreeRuntime(
         options.onPauseRequested?.()
         return
       }
+      previousTraveler = travelerState
+      previousCamera = cameraState
       const previousPosition = travelerState.position
       if (intent.actionPressed) {
         if (viewing) viewing = false
@@ -378,13 +452,17 @@ export function createThreeRuntime(
       }
       sky.step(running, inside)
       publishSky()
-      travelerDistance += previousPosition.distanceTo(travelerState.position)
+      const traveled = previousPosition.distanceTo(travelerState.position)
+      signedSpeed = (traveled / dt) * Math.sign(intent.move.y)
+      lastMovement = { move: { ...intent.move }, run: intent.run }
+      travelerDistance += traveled
       simulationTime += dt
       // No idle bob or automatic camera orbit; reduced motion freezes the score
       // and idle animation, while movement, manual look and jumping stay available.
       travelerView.update(
         travelerState,
         reducedMotion && travelerState.locomotion === "idle" ? 0 : dt,
+        signedSpeed,
       )
       cameraState = applyCameraLook(
         cameraState,
@@ -392,6 +470,7 @@ export function createThreeRuntime(
         dt,
         inside ? 0.35 : undefined,
       )
+      resolveCamera()
       clearPendingEdges()
     }
     const loop = createFixedStepLoop({
@@ -437,6 +516,10 @@ export function createThreeRuntime(
       guarded(() => {
         // Consume the delivered transition, without re-evaluating the live
         // query during media/style change dispatch. All owners share this value.
+        if (event.matches && !reducedMotion) {
+          for (const tier of ["low", "balanced", "high"] as const)
+            profiles.get(tier).grass.update?.(windTime, false)
+        }
         reducedMotion = event.matches
         sky.setReducedMotion(reducedMotion)
         input.pause()
@@ -463,6 +546,10 @@ export function createThreeRuntime(
         }
       })
       travelerView.update(travelerState, 0)
+      for (const name of ["LeftAnkle", "RightAnkle"]) {
+        const node = travelerView.object.getObjectByName(name)
+        if (node) footNodes.push(node)
+      }
       // Warm geometry at the selected tier's target size and effect cost. Low
       // startup must never allocate High targets just to prepare a later choice.
       const selected = quality.current()
@@ -507,6 +594,26 @@ export function createThreeRuntime(
       installTestApi({
         snapshot: () => ({
           generation: options.generation ?? 0,
+          presentation: {
+            alpha: presentationAlpha,
+            position: travelerView.object.position.toArray(),
+            cameraPosition: camera.position.toArray(),
+            cameraTarget: presentation.cameraTarget.toArray(),
+          },
+          animation: travelerView.animationState?.() ?? {
+            clip: null,
+            phase: 0,
+            timeScale: 0,
+          },
+          movement: {
+            move: { ...lastMovement.move },
+            run: lastMovement.run,
+            signedSpeed,
+          },
+          deviceDpr: window.devicePixelRatio,
+          cameraYaw: cameraState.yaw,
+          cameraPitch: cameraState.pitch,
+          cameraFov: camera.fov,
           forward: travelerState.forward.toArray(),
           supportId: travelerState.supportId,
           supportUp: travelerState.supportUp.toArray(),
@@ -541,6 +648,17 @@ export function createThreeRuntime(
           textureCount: renderer.info.memory.textures,
           viewport: { ...renderedViewport },
         }),
+        present(alpha) {
+          if (
+            !manual ||
+            disposed ||
+            !Number.isFinite(alpha) ||
+            alpha < 0 ||
+            alpha > 1
+          )
+            return
+          guarded(() => draw(alpha))
+        },
         setSkyTick(tick) {
           if (!manual || disposed) return
           sky.setTick(tick)
@@ -593,6 +711,11 @@ export function createThreeRuntime(
             travelerState,
             motorConfig.planetCenter,
           )
+          previousTraveler = travelerState
+          previousCamera = cameraState
+          signedSpeed = 0
+          lastMovement = { move: { x: 0, y: 0 }, run: false }
+          travelerView.update(travelerState, 0)
           sky.reset()
           inside = false
           viewing = false
@@ -607,6 +730,8 @@ export function createThreeRuntime(
           // Playback can be selected while paused; simulation remains gated.
           sky.command(command, inside)
         }
+        resolveCamera()
+        previousCamera = cameraState
         publishSky()
         draw()
       })
@@ -621,6 +746,8 @@ export function createThreeRuntime(
         guarded(() => {
           quality.select(next)
           applyQuality(next)
+          resolveCamera()
+          previousCamera = cameraState
           draw()
         }),
       dispose,

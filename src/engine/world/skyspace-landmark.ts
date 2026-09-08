@@ -337,13 +337,13 @@ export function createSkyspaceLandmark(
     object.name = "Original skyspace pavilion"
     object.matrix.copy(structure.matrix)
     object.matrixAutoUpdate = false
-    const shell = new THREE.MeshToonMaterial({ color: "#BBB7A5", gradientMap })
+    const shell = new THREE.MeshToonMaterial({ color: "#B2AB95", gradientMap })
     scope.defer(() => shell.dispose())
     const wall = new THREE.MeshBasicMaterial({ color: "#ADA89C" })
     scope.defer(() => wall.dispose())
-    const floor = new THREE.MeshToonMaterial({ color: "#827969", gradientMap })
+    const floor = new THREE.MeshToonMaterial({ color: "#766B59", gradientMap })
     scope.defer(() => floor.dispose())
-    const edge = new THREE.MeshBasicMaterial({ color: "#BBB7A5" })
+    const edge = new THREE.MeshToonMaterial({ color: "#C2B99E", gradientMap })
     scope.defer(() => edge.dispose())
     const geometry = new THREE.BufferGeometry()
     scope.defer(() => geometry.dispose())
