@@ -1,5 +1,20 @@
 {
   "schema": 1,
-  "policy": "Every moderate advisory defaults to unresolved and blocks release approval until advisory-specific owner review. Entries keyed by advisory ID require decision, reason, owner, reviewedAt and lockSha256. No real advisory IDs were available in the inherited summary; none are invented here.",
-  "entries": {}
+  "policy": "Every moderate advisory defaults to unresolved and blocks release approval until advisory-specific owner review. Every stored entry requires decision, reason, owner, reviewedAt and lockSha256 matching the current lockfile, including entries for absent advisories. Remediated means absent from the complete all-severity audit: a still-present advisory fails the audit gate regardless of severity. Remediation is not risk acceptance. Review and rebind entries after lockfile changes.",
+  "entries": {
+    "GHSA-x5fp-wj9c-mxmx": {
+      "decision": "remediated",
+      "reason": "Upgraded CLI-only shadcn from 4.19.0 to 4.21.0 and moved it to devDependencies after confirming no runtime imports or production script usage. Targeted pnpm transitive resolution upgraded every qs path through @modelcontextprotocol/sdk, express 5.2.1 (^6.14.0) and body-parser 2.3.0 (^6.15.2) from 6.15.3 to 6.16.0 within upstream ranges, without overrides. Both high and all-severity npm registry audits, including development dependencies, exited 0 with no advisories on 2026-09-08. This removes the bracket-key comma parsing array-limit bypass affecting >=6.14.2 <=6.15.3; 6.16.0 meets the advisory patch range >=6.16.0. No risk acceptance.",
+      "owner": "release engineering",
+      "reviewedAt": "2026-09-08T09:36:59.620Z",
+      "lockSha256": "56f236ff8e2216b0a709f85d90863a595c4913019b9c78a93830809843413ee5"
+    },
+    "GHSA-4mjr-xmp4-gh2g": {
+      "decision": "remediated",
+      "reason": "Upgraded CLI-only shadcn from 4.19.0 to 4.21.0 and moved it to devDependencies after confirming no runtime imports or production script usage. Targeted pnpm transitive resolution upgraded every qs path through @modelcontextprotocol/sdk, express 5.2.1 (^6.14.0) and body-parser 2.3.0 (^6.15.2) from 6.15.3 to 6.16.0 within upstream ranges, without overrides. Both high and all-severity npm registry audits, including development dependencies, exited 0 with no advisories on 2026-09-08. This removes the attacker-controlled isBuffer denial of service affecting >=2.2.5 <6.16.0; 6.16.0 meets the advisory patch range >=6.16.0. No risk acceptance.",
+      "owner": "release engineering",
+      "reviewedAt": "2026-09-08T09:36:59.620Z",
+      "lockSha256": "56f236ff8e2216b0a709f85d90863a595c4913019b9c78a93830809843413ee5"
+    }
+  }
 }

@@ -14,6 +14,23 @@ export function evaluateAudit(report, commandResult, dispositions, lockSha256) {
     severities.some((s) => !Number.isInteger(counts[s]) || counts[s] < 0)
   )
     throw new Error("Detailed audit has invalid severity counts")
+  // Review records describe this lockfile, including remediations whose
+  // advisories are now absent. A remediation is never a finding waiver.
+  const entries = dispositions?.entries ?? {}
+  for (const reviewed of Object.values(entries))
+    if (
+      !reviewed ||
+      !["deferred", "not-affected", "remediated", "unresolved"].includes(
+        reviewed.decision,
+      ) ||
+      !reviewed.reason ||
+      !reviewed.owner ||
+      !reviewed.reviewedAt ||
+      reviewed.lockSha256 !== lockSha256
+    )
+      throw new Error(
+        "Audit disposition is invalid or bound to a different lockfile",
+      )
   const findings = Object.entries(report.advisories).map(([key, advisory]) => {
     if (
       !severities.includes(advisory.severity) ||
@@ -37,22 +54,13 @@ export function evaluateAudit(report, commandResult, dispositions, lockSha256) {
         "Detailed audit lacks advisory identity, affected versions, paths or fix data",
       )
     const id = advisory.github_advisory_id ?? String(advisory.id)
+    const reviewed = entries[id]
+    if (reviewed?.decision === "remediated")
+      throw new Error(
+        `Advisory ${id} claims remediated but remains present in the audit`,
+      )
     let disposition = null
     if (advisory.severity === "moderate") {
-      const reviewed = dispositions?.entries?.[id]
-      if (
-        reviewed &&
-        (!["deferred", "not-affected", "remediated", "unresolved"].includes(
-          reviewed.decision,
-        ) ||
-          !reviewed.reason ||
-          !reviewed.owner ||
-          !reviewed.reviewedAt ||
-          reviewed.lockSha256 !== lockSha256)
-      )
-        throw new Error(
-          "Moderate disposition is invalid or bound to a different lockfile",
-        )
       disposition = reviewed ?? {
         decision: "unresolved",
         owner: "release owner",

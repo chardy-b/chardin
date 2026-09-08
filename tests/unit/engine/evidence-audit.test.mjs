@@ -9,6 +9,7 @@ import {
   evaluateHighAudit,
 } from "../../../scripts/lib/evidence-audit.mjs"
 import { runEvidence } from "../../../scripts/lib/evidence-runner.mjs"
+import { sha256 } from "../../../scripts/lib/evidence.mjs"
 import {
   readAttempt,
   readRegular,
@@ -60,6 +61,23 @@ const result = (code) => ({
   interrupted: null,
 })
 const lock = "a".repeat(64)
+const remediated = (lockSha256 = lock) => ({
+  entries: {
+    "GHSA-fixture-only-0001": {
+      decision: "remediated",
+      reason: "Synthetic package upgraded to its patched version 2.0.0",
+      owner: "fixture reviewer",
+      reviewedAt: "2026-09-08T00:00:00.000Z",
+      lockSha256,
+    },
+  },
+})
+function cleanReport() {
+  const clean = report()
+  clean.advisories = {}
+  clean.metadata.vulnerabilities.moderate = 0
+  return clean
+}
 it("retains IDs, affected versions, every dependency path/fix and explicit unresolved moderate dispositions", () => {
   const data = evaluateAudit(report(), result(1), { entries: {} }, lock)
   expect(data.highCriticalStatus).toBe("pass")
@@ -102,6 +120,38 @@ it.each(["high", "critical"])("keeps %s findings failing", (severity) => {
       .highCriticalStatus,
   ).toBe("fail")
 })
+it.each(["info", "low", "moderate", "high", "critical"])(
+  "rejects a remediated advisory still present at %s severity",
+  (severity) => {
+    expect(() =>
+      evaluateAudit(report(severity), result(1), remediated(), lock),
+    ).toThrow(/GHSA-fixture-only-0001 claims remediated but remains present/)
+  },
+)
+it("accepts an absent remediation only with complete review metadata for this lockfile", () => {
+  expect(
+    evaluateAudit(cleanReport(), result(0), remediated(), lock),
+  ).toMatchObject({
+    findings: [],
+    highCriticalStatus: "pass",
+    moderateStatus: "reviewed",
+  })
+  expect(() =>
+    evaluateAudit(cleanReport(), result(0), remediated(), "other-lock"),
+  ).toThrow(/different lockfile/)
+  for (const field of ["reason", "owner", "reviewedAt", "lockSha256"]) {
+    const missing = remediated()
+    delete missing.entries["GHSA-fixture-only-0001"][field]
+    expect(() =>
+      evaluateAudit(cleanReport(), result(0), missing, lock),
+    ).toThrow(/invalid/)
+  }
+  const unrelated = report()
+  unrelated.advisories[123].github_advisory_id = "GHSA-fixture-only-0002"
+  expect(
+    evaluateAudit(unrelated, result(1), remediated(), lock).moderateStatus,
+  ).toBe("unresolved")
+})
 it("fails closed on filtered details, malformed schema, command errors and inconsistent exits", () => {
   const filtered = { ...report(), advisories: {} }
   expect(() => evaluateAudit(filtered, result(0), {}, lock)).toThrow(/counts/)
@@ -140,6 +190,41 @@ function command(value, exit) {
     `console.log(${JSON.stringify(JSON.stringify(value))}); process.exitCode = ${exit}`,
   ]
 }
+it.each([true, false])(
+  "enforces remediation presence through the audit runner (present: %s)",
+  async (present) => {
+    writeFileSync(
+      join(cwd, "docs/audit-dispositions.json"),
+      JSON.stringify(remediated(sha256(readRegular(cwd, "pnpm-lock.yaml")))),
+    )
+    try {
+      const run = await runEvidence({
+        cwd,
+        gate: "audit",
+        command: command(cleanReport(), 0),
+        auditCommand: command(
+          present ? report() : cleanReport(),
+          present ? 1 : 0,
+        ),
+        exact: false,
+        timeoutMs: 2000,
+        graceMs: 100,
+      })
+      expect(run.exitCode).toBe(present ? 1 : 0)
+      const record = readAttempt(run.dir)
+      expect(record.status).toBe(present ? "fail" : "pass")
+      expect(record.runs.map((run) => run.code)).toEqual([0, present ? 1 : 0])
+      if (present)
+        expect(record.error).toMatch(/claims remediated but remains present/)
+      else expect(record.error).toBeNull()
+    } finally {
+      writeFileSync(
+        join(cwd, "docs/audit-dispositions.json"),
+        JSON.stringify({ entries: {} }),
+      )
+    }
+  },
+)
 it.each([
   ["moderate findings", 0, report(), 1, 0],
   ["high command fails", 9, report(), 1, 9],
