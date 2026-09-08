@@ -1,5 +1,7 @@
 # Chardin
 
+Wave 2 design: [WIL-124 seamless skyspace](docs/design/wil124-skyspace.md), with [WIL-125 acceptance and traceability](docs/design/wil125-acceptance.md) and an [original asset contract](docs/design/wil124-assets.md). These are approved design instructions; implementation and release evidence remain separate gates.
+
 Chardin is an original atmospheric browser world. The current foundation opens a tiny spherical grass Planet with an original low-poly Traveler and an accessible HTML lifecycle interface around a direct Three.js runtime.
 
 ## Requirements
