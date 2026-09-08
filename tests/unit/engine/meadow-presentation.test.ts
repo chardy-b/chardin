@@ -1,10 +1,6 @@
 import * as THREE from "three"
 import { expect, it, vi } from "vitest"
-import {
-  createGrass,
-  createTuftGeometry,
-  meadowDensity,
-} from "@/engine/world/grass"
+import { createGrass, meadowDensity } from "@/engine/world/grass"
 import { createPlanet, PLANET_PROFILES } from "@/engine/world/planet"
 import { createContactShadow } from "@/engine/player/contact-shadow"
 
@@ -45,22 +41,7 @@ it("gives shared terrain edges continuous pigment and normals without increasing
   }
 })
 
-it("authors three tuft silhouettes with six distinct curved/tapered profiles and a patch field with quiet gaps", () => {
-  const geometry = createTuftGeometry()
-  const p = geometry.getAttribute("position")
-  expect(p.count / 3).toBe(48)
-  const heights = new Set<number>()
-  for (let blade = 0; blade < 6; blade++) {
-    const start = blade * 24
-    const rootLeft = new THREE.Vector3().fromBufferAttribute(p, start)
-    const rootRight = new THREE.Vector3().fromBufferAttribute(p, start + 1)
-    const tip = new THREE.Vector3().fromBufferAttribute(p, start + 22)
-    heights.add(Math.round(tip.y * 100))
-    expect(rootLeft.distanceTo(rootRight)).toBeGreaterThan(0.05)
-    const root = rootLeft.add(rootRight).multiplyScalar(0.5)
-    expect(Math.hypot(tip.x - root.x, tip.z - root.z)).toBeGreaterThan(0.06)
-  }
-  expect(heights.size).toBe(6)
+it("authors a patch field with quiet gaps", () => {
   const densities = Array.from({ length: 200 }, (_, i) =>
     meadowDensity(
       new THREE.Vector3(
@@ -72,46 +53,48 @@ it("authors three tuft silhouettes with six distinct curved/tapered profiles and
   )
   expect(densities.filter((value) => value < 0.05).length).toBeGreaterThan(20)
   expect(densities.filter((value) => value > 0.95).length).toBeGreaterThan(20)
-  geometry.dispose()
 })
 
 it.each(["low", "medium", "high"] as const)(
   "bounds %s wind, roots, footprint and allocations across repeated updates/freeze/disposal",
   (profile) => {
     const grass = createGrass({ profile })
-    const attribute = grass.mesh.geometry.getAttribute(
-      "position",
-    ) as THREE.BufferAttribute
-    const rest = attribute.array.slice()
-    const matrix = grass.mesh.instanceMatrix.array.slice()
-    for (let i = 0; i < 1000; i++) {
-      grass.update(i / 60, false)
-      expect(grass.mesh.geometry.getAttribute("position")).toBe(attribute)
+    for (const batch of grass.batches) {
+      const attribute = batch.geometry.getAttribute(
+        "position",
+      ) as THREE.BufferAttribute
+      const rest = attribute.array.slice()
+      const matrix = batch.instanceMatrix.array.slice()
+      for (let i = 0; i < 1000; i++) {
+        grass.update(i / 60, false)
+        expect(batch.geometry.getAttribute("position")).toBe(attribute)
+      }
+      for (let i = 0; i < attribute.count; i++) {
+        expect(Math.abs(attribute.getX(i) - rest[i * 3])).toBeLessThanOrEqual(
+          0.033,
+        )
+        expect(attribute.getY(i)).toBe(rest[i * 3 + 1])
+        if (attribute.getY(i) === 0) expect(attribute.getX(i)).toBe(rest[i * 3])
+        expect(
+          Math.hypot(attribute.getX(i), attribute.getZ(i)) * 1.22,
+        ).toBeLessThan(grass.maxFootprint)
+      }
+      const frozen = attribute.array.slice(),
+        version = attribute.version
+      grass.update(100, true)
+      grass.update(Number.NaN, false)
+      expect(attribute.array).toEqual(frozen)
+      expect(attribute.version).toBe(version)
+      expect(batch.instanceMatrix.array).toEqual(matrix)
+      expect(grass.count).toBe(PLANET_PROFILES[profile].grassCount)
     }
-    for (let i = 0; i < attribute.count; i++) {
-      expect(Math.abs(attribute.getX(i) - rest[i * 3])).toBeLessThanOrEqual(
-        0.033,
-      )
-      expect(attribute.getY(i)).toBe(rest[i * 3 + 1])
-      if (attribute.getY(i) === 0) expect(attribute.getX(i)).toBe(rest[i * 3])
-      expect(
-        Math.hypot(attribute.getX(i), attribute.getZ(i)) * 1.22,
-      ).toBeLessThan(grass.maxFootprint)
-    }
-    const frozen = attribute.array.slice(),
-      version = attribute.version
-    grass.update(100, true)
-    grass.update(Number.NaN, false)
-    expect(attribute.array).toEqual(frozen)
-    expect(attribute.version).toBe(version)
-    expect(grass.mesh.instanceMatrix.array).toEqual(matrix)
-    expect(grass.mesh.count).toBe(PLANET_PROFILES[profile].grassCount)
-    const dispose = vi.spyOn(grass.mesh.geometry, "dispose")
+    const disposals = grass.batches.map((batch) =>
+      vi.spyOn(batch.geometry, "dispose"),
+    )
     grass.dispose()
     grass.dispose()
     grass.update(0, false)
-    expect(attribute.array).toEqual(frozen)
-    expect(dispose).toHaveBeenCalledOnce()
+    for (const dispose of disposals) expect(dispose).toHaveBeenCalledOnce()
   },
 )
 

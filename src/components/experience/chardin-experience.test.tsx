@@ -237,3 +237,26 @@ it("exposes labeled live commands and reduced-motion reasons without color-only 
   await user.click(screen.getByRole("button", { name: "Return to clearing" }))
   expect(controls.skyCommand).toHaveBeenLastCalledWith("return-to-clearing")
 })
+
+it("keeps paused reading panels separate from recovery and offers a keyboard return to play", async () => {
+  const user = userEvent.setup()
+  render(<ChardinExperience />)
+  act(() => publishState({ status: "paused" }))
+  await user.click(screen.getByRole("button", { name: "How to move" }))
+  const guide = screen.getByLabelText("Movement guide")
+  expect(screen.getByRole("button", { name: "Close guide" })).toHaveAttribute(
+    "aria-controls",
+    guide.id,
+  )
+  await user.click(within(guide).getByRole("button", { name: "Resume" }))
+  expect(controls.resume).toHaveBeenCalled()
+  expect(screen.getByLabelText("Chardin spherical world")).toHaveFocus()
+  await user.click(screen.getByRole("button", { name: "About the pavilion" }))
+  await user.keyboard("{Escape}")
+  expect(
+    screen.getByRole("button", { name: "About the pavilion" }),
+  ).toHaveFocus()
+  expect(
+    screen.queryByRole("button", { name: "Close description" }),
+  ).not.toBeInTheDocument()
+})

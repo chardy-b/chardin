@@ -2,8 +2,9 @@ import * as THREE from "three"
 
 /** Original four-band diffuse ramp with a warm, readable unlit floor. */
 export function createToonMaterial(
-  options: THREE.MeshToonMaterialParameters = {},
+  options: THREE.MeshToonMaterialParameters & { continuous?: boolean } = {},
 ) {
+  const { continuous = false, ...materialOptions } = options
   const ramp =
     options.gradientMap ??
     new THREE.DataTexture(
@@ -13,14 +14,16 @@ export function createToonMaterial(
       THREE.RedFormat,
     )
   if (!options.gradientMap) {
-    ramp.minFilter = ramp.magFilter = THREE.NearestFilter
+    ramp.minFilter = ramp.magFilter = continuous
+      ? THREE.LinearFilter
+      : THREE.NearestFilter
     ramp.generateMipmaps = false
     ramp.needsUpdate = true
   }
   const material = new THREE.MeshToonMaterial({
     emissive: 0x596548,
     emissiveIntensity: 0.06,
-    ...options,
+    ...materialOptions,
     gradientMap: ramp,
   })
   if (!options.gradientMap)

@@ -31,6 +31,8 @@ test("pavilion authored views and score endpoints for visual review", async ({
   await page.locator(".sky-panel summary").click()
   await page.getByRole("button", { name: "View aperture", exact: true }).click()
   await page.locator(".sky-panel summary").click()
+  // Advance the real fixed camera transition before score endpoint captures.
+  await page.evaluate(() => window.__CHARDIN_TEST__!.step(90))
   for (const tick of [
     0, 1800, 3150, 4500, 5400, 6300, 7200, 8100, 9450, 10800,
   ]) {

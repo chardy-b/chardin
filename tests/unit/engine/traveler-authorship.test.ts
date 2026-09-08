@@ -37,7 +37,7 @@ it("proves the actual exported hierarchy, silhouette, clips and bounded baked da
   expect(asset.clips.walk!.duration).toBeCloseTo(0.8)
   expect(asset.clips.run!.duration).toBeCloseTo(0.52)
   expect(asset.clips.run!.duration).toBeLessThan(asset.clips.walk!.duration)
-  expect(asset.root.userData.authoring.version).toBe(2)
+  expect(asset.root.userData.authoring.version).toBe(3)
   const bounds = new THREE.Box3().setFromObject(asset.root)
   expect(bounds.min.y).toBeCloseTo(0, 5)
   expect(bounds.max.y).toBeLessThan(1.3)
@@ -178,4 +178,87 @@ it("rates by actual speed, preserves gait phase and reuses pose/material storage
   expect(rampRelease).toHaveBeenCalledOnce()
   for (const release of [...releases, ...replacementReleases])
     expect(release).toHaveBeenCalledOnce()
+})
+
+it("gives the documented run contact forward intent, separated hands and independently readable feet", async () => {
+  const asset = await generated()
+  const mixer = new THREE.AnimationMixer(asset.root)
+  mixer.clipAction(asset.clips.run!).play()
+  mixer.setTime(asset.clips.run!.duration * 0.121789)
+  asset.root.updateMatrixWorld(true)
+  const at = (name: string) =>
+    asset.root.getObjectByName(name)!.getWorldPosition(new THREE.Vector3())
+  expect(at("Head").z).toBeLessThan(at("Torso").z - 0.065)
+  expect(Math.abs(at("LeftHand").z - at("RightHand").z)).toBeGreaterThan(0.32)
+  expect(at("RightAnkle").y - at("LeftAnkle").y).toBeGreaterThan(0.15)
+  expect(Math.abs(at("LeftAnkle").x - at("RightAnkle").x)).toBeGreaterThan(0.23)
+  expect(asset.root.getObjectByName("HairSweep")).toBeDefined()
+  expect(asset.root.getObjectByName("Nose")).toBeDefined()
+  asset.dispose()
+})
+
+it("plants a stance foot through curved root travel with render-only two-link correction", async () => {
+  const { createFootPlacement } = await import("@/engine/player/foot-placement")
+  const asset = await generated()
+  const root = new THREE.Group()
+  root.add(asset.root)
+  const feet = createFootPlacement(root)
+  const mixer = new THREE.AnimationMixer(asset.root)
+  mixer.clipAction(asset.clips.walk!).play()
+  const ground = (
+    point: THREE.Vector3,
+    position: THREE.Vector3,
+    normal: THREE.Vector3,
+  ) => {
+    normal.set(0, 1, 0)
+    position.copy(point).setY(0)
+  }
+  let planted: THREE.Vector3 | undefined
+  for (let frame = 0; frame < 20; frame++) {
+    mixer.setTime(frame / 60)
+    root.position.set(frame * 0.0005, 0, (-frame * 1.65) / 60)
+    root.rotation.y = frame * 0.003
+    root.updateMatrixWorld(true)
+    feet.capture(true, ground)
+    const before = root.matrixWorld.toArray()
+    feet.present(1)
+    root.updateMatrixWorld(true)
+    const foot = asset.root
+      .getObjectByName("LeftAnkle")!
+      .getWorldPosition(new THREE.Vector3())
+    planted ??= foot.clone()
+    expect(foot.distanceTo(planted)).toBeLessThan(0.003)
+    expect(root.matrixWorld.toArray()).toEqual(before)
+  }
+  feet.capture(false, ground)
+  feet.present(0.5)
+  feet.dispose()
+  asset.dispose()
+})
+
+it("settles sustained blocked travel to idle while preserving a brief speed interruption", async () => {
+  const asset = await generated()
+  const view = createTravelerView({ load: async () => asset })
+  await view.ready
+  const state = createInitialPlayerState({
+    planetCenter: new THREE.Vector3(),
+    groundRadius: 5.03,
+    walkSpeed: 1.65,
+    runSpeed: 3.3,
+    turnSpeed: 1.9,
+    jumpSpeed: 4.2,
+    gravity: 9.8,
+  })
+  state.locomotion = "run"
+  view.update(state, 0.1, 3.3)
+  const phase = view.animationState().phase
+  view.update(state, 1 / 60, 0)
+  expect(view.animationState().phase).toBe(phase)
+  for (let i = 0; i < 15; i++) view.update(state, 1 / 60, 0)
+  expect(view.activeAnimation()).toBe("idle")
+  expect(state.locomotion).toBe("run")
+  view.update(state, 1 / 60, -3.3)
+  expect(view.activeAnimation()).toBe("run")
+  expect(view.animationState().timeScale).toBe(-1)
+  view.dispose()
 })

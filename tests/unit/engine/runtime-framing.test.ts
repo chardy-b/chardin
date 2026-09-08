@@ -197,8 +197,15 @@ it.each([
     const standing = api.snapshot().position
     for (const quality of ["high", "low", "balanced"] as const) {
       experience.setQuality(quality)
+      const beforeView = api.snapshot()
       experience.skyCommand("view")
       expect(api.snapshot().cameraMode).toBe("view")
+      const initialViewFov = harness.camera!.fov
+      if (!harness.reduced) {
+        expect(initialViewFov).toBe(beforeView.cameraFov)
+        expect(api.snapshot().cameraPosition).toEqual(beforeView.cameraPosition)
+      }
+      api.step(90)
       expect(harness.camera!.fov).toBe(width / height < 0.85 ? 78 : 60)
       expect(centerHits()).toHaveLength(0) // Actual scene center ray sees authored sky.
       expect(harness.renderedTraveler).toHaveLength(0)
@@ -369,3 +376,73 @@ it("provides repeatable Loop 2 frames and interpolation without changing motor, 
     0.5,
   )
 })
+
+it.each([
+  [1280, 720],
+  [393, 851],
+] as const)(
+  "restores ordinary-motion visibility on the complete score exit at %ix%i, including recovery",
+  async (width, height) => {
+    harness.fallback = false
+    const canvas = document.createElement("canvas")
+    Object.defineProperties(canvas, {
+      clientWidth: { value: width },
+      clientHeight: { value: height },
+    })
+    let ready!: () => void
+    let loaded = new Promise<void>((resolve) => {
+      ready = resolve
+    })
+    experience = createExperience({
+      canvas,
+      getWebGL2Context: () => ({}) as WebGL2RenderingContext,
+      onState(state) {
+        if (["ready", "recovered"].includes(state.status)) ready()
+      },
+    })
+    await loaded
+    for (const recovered of [false, true]) {
+      experience.resume()
+      experience.start()
+      const api = window.__CHARDIN_TEST__!
+      for (const point of [0, 1, 2, 3, 4]) {
+        walkToSkyspacePoint({ point, facePoint: point === 0 ? 1 : undefined })
+        if (point === 0) expect(api.snapshot().travelerVisible).toBe(true)
+        if (point >= 3) expect(api.snapshot().travelerVisible).toBe(false)
+      }
+      experience.skyCommand("view")
+      api.step(90)
+      for (const tick of [
+        0, 1800, 3150, 4500, 5400, 6300, 7200, 8100, 9450, 10800,
+      ]) {
+        api.setSkyTick(tick)
+        expect(api.snapshot().travelerVisible).toBe(false)
+      }
+      experience.skyCommand("leave-view")
+      for (const point of [3, 2, 1, 0]) {
+        walkToSkyspacePoint({ point, backward: true })
+        if (recovered) {
+          const paused = api.snapshot()
+          experience.pause()
+          experience.setQuality(point % 2 ? "high" : "low")
+          expect(api.snapshot().position).toEqual(paused.position)
+          experience.resume()
+        }
+      }
+      expect(api.snapshot().travelerVisible).toBe(true)
+      expect(harness.renderedTraveler.length).toBeGreaterThan(0)
+      expect(harness.reduced).toBe(false)
+      if (!recovered) {
+        loaded = new Promise<void>((resolve) => {
+          ready = resolve
+        })
+        canvas.dispatchEvent(
+          new Event("webglcontextlost", { cancelable: true }),
+        )
+        canvas.dispatchEvent(new Event("webglcontextrestored"))
+        await loaded
+        expect(window.__CHARDIN_TEST__!.snapshot().running).toBe(false)
+      }
+    }
+  },
+)

@@ -66,3 +66,30 @@ export function prepareCharacterFrame() {
     throw new Error("Expected a non-neutral run contact")
   return state
 }
+
+/** Evaluate in the captured page. The controller adds browser.version() and
+ * SHA-256 of the returned full PNG, never inferred buffer dimensions. */
+export function visualLoopEnvironment() {
+  const canvas = document.querySelector("canvas")
+  const gl = canvas?.getContext("webgl2")
+  if (!canvas || !gl || gl.isContextLost())
+    throw new Error("A live captured WebGL2 context is required")
+  const debug = gl.getExtension("WEBGL_debug_renderer_info")
+  return {
+    userAgent: navigator.userAgent,
+    renderer: gl.getParameter(
+      debug ? debug.UNMASKED_RENDERER_WEBGL : gl.RENDERER,
+    ) as string,
+    vendor: gl.getParameter(
+      debug ? debug.UNMASKED_VENDOR_WEBGL : gl.VENDOR,
+    ) as string,
+    unmaskedRendererAvailable: Boolean(debug),
+    webglVersion: gl.getParameter(gl.VERSION) as string,
+    drawingBuffer: {
+      width: gl.drawingBufferWidth,
+      height: gl.drawingBufferHeight,
+    },
+    canvas: { width: canvas.width, height: canvas.height },
+    deviceDpr: window.devicePixelRatio,
+  }
+}

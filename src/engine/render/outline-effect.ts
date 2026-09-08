@@ -9,8 +9,8 @@ export class ChardinOutlineEffect extends Effect {
       uniforms: new Map<string, Uniform>([
         ["normalMap", new Uniform(normals)],
         ["texel", new Uniform(new Vector2(1, 1))],
-        ["depthStrength", new Uniform(0.34)],
-        ["normalStrength", new Uniform(0.12)],
+        ["depthStrength", new Uniform(0.28)],
+        ["normalStrength", new Uniform(0.08)],
       ]),
     })
   }
@@ -21,8 +21,8 @@ export class ChardinOutlineEffect extends Effect {
   }
   /** Deterministic verification can isolate the two independently sampled signals. */
   setSignals(depth: boolean, normals: boolean) {
-    this.uniforms.get("depthStrength")!.value = depth ? 0.34 : 0
-    this.uniforms.get("normalStrength")!.value = normals ? 0.12 : 0
+    this.uniforms.get("depthStrength")!.value = depth ? 0.28 : 0
+    this.uniforms.get("normalStrength")!.value = normals ? 0.08 : 0
   }
   dispose() {
     // The normal texture is borrowed from NormalPass, whose owner disposes it.

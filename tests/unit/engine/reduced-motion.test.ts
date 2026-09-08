@@ -11,6 +11,7 @@ const harness = vi.hoisted(() => ({
   ) => void,
   frame: null as FrameRequestCallback | null,
   now: 0,
+  resize: (() => {}) as () => void,
 }))
 
 // Keep the real motor, camera, content, GLB loader and AnimationMixer. Only the
@@ -78,6 +79,9 @@ beforeEach(async () => {
   vi.stubGlobal(
     "ResizeObserver",
     class {
+      constructor(callback: () => void) {
+        harness.resize = callback
+      }
       observe() {}
       disconnect() {}
     },
@@ -138,9 +142,36 @@ function renderedState() {
       matrix: object.matrixWorld.toArray(),
       visible: object.visible,
       intensity: object instanceof THREE.Light ? object.intensity : undefined,
+      color: object instanceof THREE.Light ? object.color.toArray() : undefined,
+      geometry:
+        object instanceof THREE.Mesh
+          ? Object.fromEntries(
+              Object.entries(
+                (object.geometry as THREE.BufferGeometry).attributes,
+              ).map(([name, attribute]) => [name, Array.from(attribute.array)]),
+            )
+          : undefined,
+      material:
+        object instanceof THREE.Mesh
+          ? (Array.isArray(object.material)
+              ? object.material
+              : [object.material]
+            ).map((material) => ({
+              opacity: material.opacity,
+              color: material.color?.toArray(),
+            }))
+          : undefined,
     })
   })
-  return { objects, camera: harness.camera!.matrixWorld.toArray() }
+  // Exact serialized comparison includes every numeric component, without
+  // repeatedly walking tens of thousands of vertices in the assertion library.
+  return JSON.stringify({
+    objects,
+    camera: harness.camera!.matrixWorld.toArray(),
+    projection: harness.camera!.projectionMatrix.toArray(),
+    background: (harness.scene!.background as THREE.Color).toArray(),
+    fog: (harness.scene!.fog as THREE.Fog).color.toArray(),
+  })
 }
 
 it("keeps the real loaded idle traveler, camera and lights identical across 120 reduced-motion steps", async () => {
@@ -204,9 +235,7 @@ it("presents intermediate ordinary frames without advancing motor or gait, and f
     harness.reduced = true
     harness.motionChanged({ matches: true })
     const meshes = () =>
-      harness.scene!.getObjectByName(
-        "Clustered meadow grass",
-      ) as THREE.InstancedMesh
+      harness.scene!.getObjectByName("Meadow medium") as THREE.InstancedMesh
     const frozen = Array.from(meshes().geometry.getAttribute("position").array)
     for (const tier of ["high", "low", "balanced"] as const) {
       runtime.setQuality!(tier)
@@ -218,6 +247,160 @@ it("presents intermediate ordinary frames without advancing motor or gait, and f
         Array.from(meshes().geometry.getAttribute("position").array),
       ).toEqual(frozen)
     }
+  } finally {
+    runtime.dispose()
+  }
+})
+
+it.each([false, true])(
+  "freezes the entire presented world across paused redraws (reduced %s)",
+  async (reduced) => {
+    harness.reduced = reduced
+    window.history.replaceState({}, "", "/")
+    const canvas = document.createElement("canvas")
+    Object.defineProperties(canvas, {
+      clientWidth: { value: 393 },
+      clientHeight: { value: 727 },
+    })
+    const touchRoot = document.createElement("div")
+    touchRoot.innerHTML = '<button data-touch-input="pause">Pause</button>'
+    const onPauseRequested = vi.fn()
+    const runtime = createThreeRuntime(canvas, {} as WebGL2RenderingContext, {
+      touchRoot,
+      onPauseRequested,
+    })
+    const tapPause = () => {
+      touchRoot.firstElementChild!.dispatchEvent(
+        new MouseEvent("pointerdown", { bubbles: true, cancelable: true }),
+      )
+      touchRoot.firstElementChild!.dispatchEvent(
+        new MouseEvent("pointerup", { bubbles: true }),
+      )
+    }
+    const frame = (milliseconds: number) => {
+      harness.now = milliseconds
+      harness.frame!(milliseconds)
+    }
+    try {
+      await runtime.ready
+      runtime.start()
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }))
+      frame(517)
+      frame(525)
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyW" }))
+      const api = window.__CHARDIN_TEST__!
+      const before = api.snapshot()
+      const frozen = renderedState()
+      tapPause()
+      frame(550)
+      expect(onPauseRequested).toHaveBeenCalledOnce()
+      expect(api.snapshot().running).toBe(false)
+      expect(renderedState()).toEqual(frozen)
+      expect(before.presentation.alpha).toBeGreaterThan(0)
+      expect(before.presentation.alpha).toBeLessThan(1)
+      tapPause()
+      frame(950) // A repeated tap/canceled callback cannot advance anything.
+      runtime.pause()
+      harness.resize() // A layout notification must not select a new pose/phase.
+      expect(renderedState()).toEqual(frozen)
+      expect(api.snapshot().animation).toEqual(before.animation)
+      expect(api.snapshot().simulationTime).toBe(before.simulationTime)
+      runtime.setQuality!(api.snapshot().quality)
+      expect(renderedState()).toEqual(frozen)
+      harness.motionChanged({ matches: reduced })
+      expect(renderedState()).toEqual(frozen)
+      runtime.resume()
+      frame(975)
+      expect(renderedState()).not.toEqual(frozen)
+    } finally {
+      runtime.dispose()
+    }
+  },
+)
+
+it.each([false, true])(
+  "retains each species' frozen phase across paused quality and motion changes (initial reduced %s)",
+  async (reduced) => {
+    harness.reduced = reduced
+    const runtime = createThreeRuntime(
+      document.createElement("canvas"),
+      {} as WebGL2RenderingContext,
+    )
+    const wind = () =>
+      ["low", "medium", "accent"].map((kind) => {
+        const mesh = harness.scene!.getObjectByName(
+          `Meadow ${kind}`,
+        ) as THREE.Mesh
+        return Array.from(mesh.geometry.getAttribute("position").array)
+      })
+    try {
+      await runtime.ready
+      runtime.start()
+      const api = window.__CHARDIN_TEST__!
+      api.step(35, { move: { x: 0, y: 1 }, run: true })
+      api.present(0.4)
+      runtime.pause()
+      const frozen = wind()
+      const before = api.snapshot()
+      for (const quality of ["high", "low", "balanced", "high"] as const) {
+        runtime.setQuality!(quality)
+        expect(wind()).toEqual(frozen)
+        expect(api.snapshot().animation).toEqual(before.animation)
+        expect(api.snapshot().presentation.alpha).toBe(
+          before.presentation.alpha,
+        )
+        expect(api.snapshot().simulationTime).toBe(before.simulationTime)
+      }
+      if (reduced) return // Initial reduced motion keeps authored rest geometry.
+      harness.reduced = true
+      harness.motionChanged({ matches: true })
+      runtime.resume()
+      api.step(120)
+      expect(wind()).toEqual(frozen)
+      harness.reduced = false
+      harness.motionChanged({ matches: false })
+      expect(wind()).toEqual(frozen) // Resuming wind cannot jump to motor time.
+      api.step(1)
+      expect(wind()).not.toEqual(frozen)
+    } finally {
+      runtime.dispose()
+    }
+  },
+)
+
+it("freezes a playing non-neutral score, camera transition, feet and wind on every paused presentation", async () => {
+  const { walkToSkyspacePoint } =
+    await import("../../e2e/helpers/skyspace-route")
+  const runtime = createThreeRuntime(
+    document.createElement("canvas"),
+    {} as WebGL2RenderingContext,
+  )
+  try {
+    await runtime.ready
+    runtime.start()
+    for (const point of [0, 1, 2, 3, 4]) walkToSkyspacePoint({ point })
+    const api = window.__CHARDIN_TEST__!
+    api.setSkyTick(4500)
+    runtime.skyCommand!("continue")
+    runtime.skyCommand!("view")
+    api.step(3)
+    api.present(0.4)
+    runtime.pause()
+    const before = api.snapshot()
+    const frozen = renderedState()
+    expect(before.sky.tick).toBe(4503)
+    for (const alpha of [0, 0.25, 0.5, 0.75, 1]) {
+      api.step(24, { move: { x: 1, y: 1 } })
+      api.present(alpha)
+      harness.resize()
+      runtime.setQuality!(before.quality)
+      expect(renderedState()).toEqual(frozen)
+      expect(api.snapshot().sky).toEqual(before.sky)
+      expect(api.snapshot().presentation).toEqual(before.presentation)
+    }
+    runtime.resume()
+    api.step(1)
+    expect(api.snapshot().sky.tick).toBe(4504)
   } finally {
     runtime.dispose()
   }

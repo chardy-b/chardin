@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "scope": "Tracked public assets, favicon, controller-reviewed WIL-145 visual baselines and explicitly inventoried WIL-125/WIL-145 procedural art/presentation source. Dependency notices are separate. Hashes establish integrity, not copyright clearance.",
+  "scope": "Tracked public assets, favicon, unchanged controller-reviewed WIL-145 visual baselines and inventoried WIL-125/WIL-145/WIL-146 procedural art/presentation source. Hashes establish integrity, not rights or visual acceptance.",
   "entries": [
     {
       "path": "public/file.svg",
@@ -18,9 +18,9 @@
     },
     {
       "path": "public/models/traveler.glb",
-      "bytes": 147624,
-      "sha256": "fce9de28e7db1b2fda68764582f4b1c5e968f5ee4b525e648e5bc7a80496147d",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 151284,
+      "sha256": "7f0cc734bf217e971f0710e6bc1d6ca89fbf9db6beda554f0c144eaefde67348",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
@@ -137,36 +137,36 @@
     },
     {
       "path": "tests/e2e/chardin.visual.spec.ts-snapshots/spawn-chromium-linux.png",
-      "bytes": 216450,
-      "sha256": "028eb8cd039b0577ce004ab2a4968bed08e1d865d3116416392f1420fdada73b",
+      "bytes": 154571,
+      "sha256": "9244ed86c2f10d5a3e7a0384160d2f12dd40f22ea8a7cfb59789a7e41b929f46",
       "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "tests/e2e/chardin.visual.spec.ts-snapshots/spawn-mobile-chromium-linux.png",
-      "bytes": 91475,
-      "sha256": "232928a3a754255bc8f816a08d0e7b39a702db0d09f365f8e61fdef8410ecda5",
+      "bytes": 81739,
+      "sha256": "b74a12862a5c2594844eca76ef470a5be0687f683b9940a7fd33e784e5fa7d3c",
       "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "tests/e2e/chardin.visual.spec.ts-snapshots/tablet-chromium-linux.png",
-      "bytes": 189103,
-      "sha256": "92d363c8078a90147b6b39697f30c7ace3b130310ef47a5bbf7a6e7118ee22e5",
+      "bytes": 115604,
+      "sha256": "52d1ad72bafb701751050ae6ba2d05163a137887133b5f5b814121cb1f618a9f",
       "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "tests/e2e/chardin.visual.spec.ts-snapshots/traveled-chromium-linux.png",
-      "bytes": 224324,
-      "sha256": "efcf934a48589593753c5a08bdc279e1aa84a79d2370ac99b938fc72c5f01677",
+      "bytes": 126781,
+      "sha256": "2329aa28be2713af6bf4833518c113e4ae543c3be62eca750585afe235747288",
       "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "tests/e2e/chardin.visual.spec.ts-snapshots/traveled-mobile-chromium-linux.png",
-      "bytes": 95662,
-      "sha256": "f5279f9662ed5528ce5b88faf08c7145325fa1b3fd4c829a82cab9d7764ca330",
+      "bytes": 66466,
+      "sha256": "31ebd48033f65a0bd912005622f97e4ee1dbb2bc0659374e4ae5044ac6e3ec41",
       "source": "Chardin deterministic browser captures; tests/e2e/chardin.visual.spec.ts",
       "rights": "original-repository-license-undecided"
     },
@@ -179,9 +179,9 @@
     },
     {
       "path": "src/engine/world/skyspace-landmark.ts",
-      "bytes": 11913,
-      "sha256": "f380d3d62cb9b1b6f85e2503825f9618901ae6cae7fa027ce52c4db95ab425a4",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 12795,
+      "sha256": "c865145b894ab0eb09262eecbe4c411e65112bc3799d002e7ec91951a54e3b40",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
@@ -200,30 +200,30 @@
     },
     {
       "path": "src/app/globals.css",
-      "bytes": 11111,
-      "sha256": "cadefe206cfdd3b34da5370b9920506acc61bab98e8f252980f50c72255119fc",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 13318,
+      "sha256": "9a91ef474d52b705a51c64ff60e0541e74ff173e0aa75b0a4b7a75b0cadd19d9",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "scripts/generate-traveler.mjs",
-      "bytes": 8994,
-      "sha256": "c3eef38a45e497ebd704d5333c20bfc775317c646e25f07746d5b753a2ca90ee",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 9840,
+      "sha256": "44f2606ef3b9bec5d92299bc7300149c7b9da8222fea1a46823037c54940dc7e",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "src/engine/world/planet.ts",
-      "bytes": 6475,
-      "sha256": "c5182cdc4a7736a05d5a68a57ebe496a4d450ff4eabf82b8ad2df0576c2e946a",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 6497,
+      "sha256": "60ace8e6953c0a7d7995e68b67699534d242b0e5709e9e7962bf8662b89d537a",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "src/engine/world/grass.ts",
-      "bytes": 7234,
-      "sha256": "9b193d2322fc5af0f18631917e9585a416d166bbe7b13eed678a7f950cdad782",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 9285,
+      "sha256": "490041e6be6c14f16564f01a4caa21b3ed683b1651c89195b13e0a7362dc1529",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
@@ -235,37 +235,37 @@
     },
     {
       "path": "src/engine/player/traveler-view.ts",
-      "bytes": 8732,
-      "sha256": "0cec8b138e8fba112d72089667a91b66b2f49f9c97ffa9755d0577720bc4b110",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 9769,
+      "sha256": "de800523c7b220d3c0f3fb87ee783ca9eb1cd8e5c0b460b8d51ca40043ad37cc",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "src/engine/player/presentation.ts",
-      "bytes": 3718,
-      "sha256": "b6d96e105c1913baa1954537500580533f5b9f5d7a6641e84dfd9db34ac50ec1",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 3681,
+      "sha256": "41d0f94af67bc094bc747d696d7873da2f286efc2638087c50ba659c16c0424c",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "src/engine/player/contact-shadow.ts",
-      "bytes": 2022,
-      "sha256": "ffff9db9681d0fac0eb68f36bbedff89aee573b2623b581d55974c3455964dcd",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 2168,
+      "sha256": "d9901876de3294a184444ea73d8ab72c7fae04cf2dcd227c12fd4ad94bd4efd1",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "src/engine/camera/third-person-camera.ts",
-      "bytes": 5967,
-      "sha256": "fddfc69ae6b72cf0f6fd5217ff46def8dbbed96b6122487fec9e14fee4dd88a2",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 8062,
+      "sha256": "74a0539a1348d86c222d62a4e7057ca82c90c2c32113dd668535d006a9cdf96a",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "src/engine/three-runtime.ts",
-      "bytes": 25957,
-      "sha256": "b2dfb3f6e6c66ff613b6efb89a2d46f365ae67186c82897251e2fe14cc6afe25",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 30198,
+      "sha256": "956592a47c92395c80404d99f73edfbce2095a7a60e049a5299de14ec262121f",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
@@ -277,23 +277,30 @@
     },
     {
       "path": "src/engine/render/toon-material.ts",
-      "bytes": 764,
-      "sha256": "8fe45eac6e53bb8a06e93c91fc1576da15dba95a6f2f03490372b6a2c09991c6",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 906,
+      "sha256": "50e9f3b71c15efb673afd6e76e50dbef581de729fc182946f8826518c795769b",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "src/engine/render/outline-effect.ts",
       "bytes": 1213,
-      "sha256": "6840fde651463c0a823c33ae3b92ebea66e4cc67d2b56d8bf9d951a04c89fa45",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "sha256": "dadf53e4d51304ea722aff66c1f0fce77c31c94643846fde5dff6dbd89a43abb",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
       "path": "src/components/experience/chardin-experience.tsx",
-      "bytes": 14013,
-      "sha256": "3e2b2ccbb0a6d69ebb5d909f1e2fbc11944883b2076261005082b6b574326d26",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "bytes": 15125,
+      "sha256": "2a04fe1f4e8935232df73ab4c3f92d231ca1fccce7a95f589e2ed28ed3a26c84",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/player/foot-placement.ts",
+      "bytes": 5030,
+      "sha256": "e28329338864575066d8bad687fa80ff8e1e93bf21e41fcd71eb4082069225fc",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     }
   ]

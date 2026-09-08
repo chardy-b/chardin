@@ -136,7 +136,7 @@ it("bounds support projection, malformed alpha and camera mode changes using reu
     mode: "view" as const,
   }
   p.camera(before, after, 0)
-  expect(p.cameraPosition).toEqual(after.position)
+  expect(p.cameraPosition).toEqual(before.position)
   const blocked = {
     ...collider,
     sweepCamera: vi.fn(() => ({

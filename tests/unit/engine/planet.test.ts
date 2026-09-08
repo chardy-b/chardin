@@ -179,11 +179,11 @@ describe("instanced grass", () => {
     const rotation = new THREE.Quaternion()
     const scale = new THREE.Vector3()
 
-    expect(first.mesh.count).toBe(PLANET_PROFILES.high.grassCount)
-    for (let index = 0; index < first.mesh.count; index += 1) {
-      first.mesh.getMatrixAt(index, matrix)
-      repeat.mesh.getMatrixAt(index, repeatMatrix)
-      other.mesh.getMatrixAt(index, otherMatrix)
+    expect(first.count).toBe(PLANET_PROFILES.high.grassCount)
+    for (let index = 0; index < first.count; index += 1) {
+      first.getMatrixAt(index, matrix)
+      repeat.getMatrixAt(index, repeatMatrix)
+      other.getMatrixAt(index, otherMatrix)
       expect(matrix.elements).toEqual(repeatMatrix.elements)
       matrix.decompose(position, rotation, scale)
       expect(position.length()).toBeGreaterThan(4.9)
@@ -192,8 +192,8 @@ describe("instanced grass", () => {
       expect(up.dot(position.clone().normalize())).toBeGreaterThan(0.99999)
       expect(Number.isFinite(up.x + up.y + up.z)).toBe(true)
     }
-    first.mesh.getMatrixAt(0, matrix)
-    other.mesh.getMatrixAt(0, otherMatrix)
+    first.getMatrixAt(0, matrix)
+    other.getMatrixAt(0, otherMatrix)
     expect(matrix.elements).not.toEqual(otherMatrix.elements)
     first.dispose()
     repeat.dispose()
@@ -211,9 +211,9 @@ describe("instanced grass", () => {
         const distinct = new Set<string>()
         let minY = 1
         let nearSpawn = 0
-        expect(grass.mesh.count).toBe(PLANET_PROFILES[profile].grassCount)
-        for (let index = 0; index < grass.mesh.count; index += 1) {
-          grass.mesh.getMatrixAt(index, matrix)
+        expect(grass.count).toBe(PLANET_PROFILES[profile].grassCount)
+        for (let index = 0; index < grass.count; index += 1) {
+          grass.getMatrixAt(index, matrix)
           position.setFromMatrixPosition(matrix).normalize()
           minY = Math.min(minY, position.y)
           bands[Math.min(7, Math.floor(((position.y + 1) / 2) * 8))]! += 1
@@ -228,7 +228,7 @@ describe("instanced grass", () => {
         }
         expect(minY).toBeLessThan(-0.9)
         expect(bands.every((count) => count > 0)).toBe(true)
-        expect(distinct.size).toBe(grass.mesh.count)
+        expect(distinct.size).toBe(grass.count)
         expect(nearSpawn).toBeGreaterThan(0)
         grass.dispose()
       }
@@ -247,8 +247,8 @@ describe("instanced grass", () => {
       const position = new THREE.Vector3()
       const direction = new THREE.Vector3()
       const raycaster = new THREE.Raycaster()
-      for (let index = 0; index < grass.mesh.count; index += 1) {
-        grass.mesh.getMatrixAt(index, matrix)
+      for (let index = 0; index < grass.count; index += 1) {
+        grass.getMatrixAt(index, matrix)
         position.setFromMatrixPosition(matrix)
         direction.copy(position).sub(center).normalize()
         raycaster.set(
@@ -270,8 +270,8 @@ describe("instanced grass", () => {
     const matrix = new THREE.Matrix4()
     const point = new THREE.Vector3()
     const footprintAngle = grass.maxFootprint / 5
-    for (let index = 0; index < grass.mesh.count; index += 1) {
-      grass.mesh.getMatrixAt(index, matrix)
+    for (let index = 0; index < grass.count; index += 1) {
+      grass.getMatrixAt(index, matrix)
       point.setFromMatrixPosition(matrix).normalize()
       expect(point.angleTo(SPAWN_DIRECTION)).toBeGreaterThanOrEqual(
         grass.clearings.spawn + footprintAngle - 1e-6,
@@ -286,22 +286,22 @@ describe("instanced grass", () => {
   it("handles malformed counts conservatively and disposes every owner once", () => {
     for (const count of [Number.NaN, Number.POSITIVE_INFINITY]) {
       const fallback = createGrass({ profile: "low", count })
-      expect(fallback.mesh.count).toBe(PLANET_PROFILES.low.grassCount)
+      expect(fallback.count).toBe(PLANET_PROFILES.low.grassCount)
       fallback.dispose()
     }
     for (const count of [0, -1, Number.NEGATIVE_INFINITY]) {
       const empty = createGrass({ count })
-      expect(empty.mesh.count).toBe(0)
+      expect(empty.count).toBe(0)
       empty.dispose()
     }
     const grass = createGrass({ count: Number.MAX_SAFE_INTEGER })
-    expect(grass.mesh.count).toBe(PLANET_PROFILES.high.grassCount)
-    const geometryDispose = vi.spyOn(grass.mesh.geometry, "dispose")
+    expect(grass.count).toBe(PLANET_PROFILES.high.grassCount)
+    const geometryDispose = vi.spyOn(grass.batches[0].geometry, "dispose")
     const materialDispose = vi.spyOn(
-      grass.mesh.material as THREE.Material,
+      grass.batches[0].material as THREE.Material,
       "dispose",
     )
-    const meshDispose = vi.spyOn(grass.mesh, "dispose")
+    const meshDispose = vi.spyOn(grass.batches[0], "dispose")
     grass.dispose()
     grass.dispose()
     expect(geometryDispose).toHaveBeenCalledOnce()

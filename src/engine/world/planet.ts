@@ -160,6 +160,7 @@ export function createPlanet({
   geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3))
   const material = createToonMaterial({
     vertexColors: true,
+    continuous: true,
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.name = "Authored grass planet"

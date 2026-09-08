@@ -64,9 +64,9 @@
     },
     {
       "path": "src/engine/world/skyspace-landmark.ts",
-      "bytes": 11913,
-      "sha256": "f380d3d62cb9b1b6f85e2503825f9618901ae6cae7fa027ce52c4db95ab425a4",
-      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable; exterior presentation amended by WIL-145, docs/design/wil145-provenance.json",
+      "bytes": 12795,
+      "sha256": "c865145b894ab0eb09262eecbe4c411e65112bc3799d002e7ec91951a54e3b40",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
@@ -85,12 +85,13 @@
     },
     {
       "path": "src/app/globals.css",
-      "bytes": 11111,
-      "sha256": "cadefe206cfdd3b34da5370b9920506acc61bab98e8f252980f50c72255119fc",
-      "source": "Original agent-assisted Chardin WIL-125 procedural content; docs/design/wil125-provenance.json; existing project definitions/styles retained where applicable; exterior presentation amended by WIL-145, docs/design/wil145-provenance.json",
+      "bytes": 13318,
+      "sha256": "9a91ef474d52b705a51c64ff60e0541e74ff173e0aa75b0a4b7a75b0cadd19d9",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     }
   ],
   "kind": "original procedural geometry, material parameters, light score and HTML still alternative",
-  "presentationAmendment": "WIL-145: current hashes refreshed for manifest/material/HUD edits; canonical geometry and score unchanged. Original rights decisions retained. See wil145-provenance.json."
+  "presentationAmendment": "WIL-145: current hashes refreshed for manifest/material/HUD edits; canonical geometry and score unchanged. Original rights decisions retained. See wil145-provenance.json.",
+  "currentByteAmendment": "WIL-146 updates current file integrity records below. Historical authoring parameters above describe the earlier loop, not the current geometry/presentation. Current implementation and exact parameters: docs/design/wil146-provenance.json and wil146-visual-loop.md. Rights/review remain pending."
 }

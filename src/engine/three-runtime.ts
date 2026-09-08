@@ -1,3 +1,7 @@
+import {
+  createFootPlacement,
+  type FootSurface,
+} from "@/engine/player/foot-placement"
 import * as THREE from "three"
 import type {
   ControlIntent,
@@ -12,6 +16,8 @@ import {
 } from "@/engine/player/player-motor"
 import {
   applyCameraLook,
+  cameraIntersectsTraveler,
+  easeCameraTransition,
   createThirdPersonCameraState,
   updateThirdPersonCamera,
 } from "@/engine/camera/third-person-camera"
@@ -121,7 +127,8 @@ export function createThreeRuntime(
       far: 30,
     })
     sun.shadow.bias = -0.0005
-    sun.shadow.normalBias = 0.012
+    sun.shadow.normalBias = 0.025
+    sun.shadow.intensity = 0.72
     scene.add(sun)
     scope.defer(() => sun.shadow.dispose())
     const contentStart = performance.now()
@@ -193,6 +200,7 @@ export function createThreeRuntime(
     scene.add(contactShadow.object)
     scope.defer(() => contactShadow.dispose())
     const footPoint = new THREE.Vector3()
+    const movementDelta = new THREE.Vector3()
     const groundSample = {
       position: new THREE.Vector3(),
       normal: new THREE.Vector3(),
@@ -246,6 +254,7 @@ export function createThreeRuntime(
     let previousCamera = cameraState
     const presentation = createPresentation()
     let windTime = 0
+    let windSimulationTime = 0
     let presentationAlpha = 1
     let signedSpeed = 0
     let lastMovement = { move: { x: 0, y: 0 }, run: false }
@@ -270,7 +279,21 @@ export function createThreeRuntime(
       height: Math.max(canvas.clientHeight, 1),
     })
     scope.defer(() => pipeline.dispose())
-    const resolveCamera = () => {
+    let previousFov = 42,
+      currentFov = 42
+    const resolveCamera = (seconds = 0) => {
+      const before = cameraState
+      previousFov = currentFov
+      const desiredFov = viewing ? (camera.aspect < 0.85 ? 78 : 60) : 42
+      currentFov =
+        reducedMotion || seconds === 0
+          ? desiredFov
+          : THREE.MathUtils.lerp(
+              currentFov,
+              desiredFov,
+              1 - Math.exp(-seconds / 0.12),
+            )
+      if (Math.abs(currentFov - desiredFov) < 0.001) currentFov = desiredFov
       const up = travelerState.supportUp
       // Portrait reveals more of the curved horizon while keeping the Traveler central.
       const portrait = camera.aspect < 0.85
@@ -300,8 +323,31 @@ export function createThreeRuntime(
             : undefined,
         },
       )
+      if (!reducedMotion)
+        cameraState = easeCameraTransition(
+          before,
+          cameraState,
+          seconds,
+          collider,
+        )
     }
-    const placeTravelerAndCamera = (alpha: number) => {
+    let footPlacement: ReturnType<typeof createFootPlacement> | undefined
+    scope.defer(() => footPlacement?.dispose())
+    const sampleFootSurface: FootSurface = (point, position, normal) => {
+      const support =
+        travelerState.supportId === "planet"
+          ? null
+          : collider?.sampleSupport(point, travelerState.supportId)
+      if (support) {
+        position.copy(support.point)
+        normal.copy(support.normal)
+      } else {
+        content.planet.surfaceAt(point, groundSample)
+        position.copy(groundSample.position)
+        normal.copy(groundSample.normal)
+      }
+    }
+    const seatTraveler = (alpha: number) => {
       presentation.traveler(
         previousTraveler,
         travelerState,
@@ -309,7 +355,6 @@ export function createThreeRuntime(
         motorConfig.planetCenter,
         collider,
       )
-      presentation.camera(previousCamera, cameraState, alpha, collider)
       // Seat the presentation on this tier's rendered terrain; the motor keeps
       // its invariant sphere. Ramp/floor positions remain collision-owned.
       if (travelerState.previousGroundedSupport === "planet") {
@@ -335,10 +380,22 @@ export function createThreeRuntime(
       travelerView.object.position.copy(presentation.position)
       travelerView.object.quaternion.copy(presentation.rotation)
       travelerView.present?.(alpha)
-      travelerView.object.visible = !cameraState.hideTraveler
+    }
+    const placeTravelerAndCamera = (alpha: number) => {
+      seatTraveler(alpha)
+      footPlacement?.present(alpha)
+      presentation.camera(previousCamera, cameraState, alpha, collider)
+      const hideTraveler =
+        cameraState.hideTraveler ||
+        cameraIntersectsTraveler(
+          presentation.cameraPosition,
+          presentation.position,
+          presentation.up,
+          !travelerView.object.visible,
+        )
+      travelerView.object.visible = !hideTraveler
       travelerView.object.updateMatrixWorld(true)
-      contactShadow.object.visible =
-        !cameraState.hideTraveler && travelerState.grounded
+      contactShadow.object.visible = !hideTraveler && travelerState.grounded
       for (let i = 0; i < footNodes.length; i++) {
         footNodes[i].getWorldPosition(footPoint)
         const support =
@@ -356,7 +413,10 @@ export function createThreeRuntime(
           Math.max(0, footPoint.distanceTo(groundSample.position) - 0.08),
         )
       }
-      const fov = viewing ? (camera.aspect < 0.85 ? 78 : 60) : 42
+      const fov =
+        previousFov === currentFov
+          ? currentFov
+          : THREE.MathUtils.lerp(previousFov, currentFov, alpha)
       if (camera.fov !== fov) {
         camera.fov = fov
         camera.updateProjectionMatrix()
@@ -365,9 +425,12 @@ export function createThreeRuntime(
       camera.up.copy(presentation.cameraUp)
       camera.lookAt(presentation.cameraTarget)
     }
-    const draw = (alpha = 1) => {
-      presentationAlpha = alpha
+    const draw = (alpha = presentationAlpha) => {
       if (disposed) return
+      // Redraws (resize, settings, media changes) do not own presentation time.
+      // Keep the last displayed sample while resting, including fractional IK.
+      if (!running) alpha = presentationAlpha
+      presentationAlpha = alpha
       const light = sky.frame()
       ;(scene.background as THREE.Color).fromArray(light.sky)
       ;(scene.fog as THREE.Fog).color.fromArray(light.sky)
@@ -377,8 +440,8 @@ export function createThreeRuntime(
       pipeline.applyLightFrame(light)
       landmark?.applyWall(light.wall)
       placeTravelerAndCamera(alpha)
-      if (!reducedMotion)
-        windTime = Math.max(0, simulationTime - (1 - alpha) / 60)
+      if (running && !reducedMotion)
+        windTime = Math.max(0, windSimulationTime - (1 - alpha) / 60)
       content.grass.update?.(windTime, reducedMotion)
       canvas.dataset.travelerDistance = travelerDistance.toFixed(4)
       canvas.dataset.travelerGrounded = String(travelerState.grounded)
@@ -403,6 +466,8 @@ export function createThreeRuntime(
         scene.remove(content.planet.mesh, content.grass.mesh)
         content = nextContent
         scene.add(content.planet.mesh, content.grass.mesh)
+        seatTraveler(running ? 1 : presentationAlpha)
+        footPlacement?.capture(travelerState.grounded, sampleFootSurface, true)
       }
       landmark?.setQuality(next)
       pipeline.configure(next, reducedMotion, window.devicePixelRatio)
@@ -413,11 +478,18 @@ export function createThreeRuntime(
     const resize = () => {
       const width = Math.max(canvas.clientWidth, 1)
       const height = Math.max(canvas.clientHeight, 1)
+      if (
+        width === renderedViewport.width &&
+        height === renderedViewport.height
+      )
+        return
       pipeline.resize(width, height)
       camera.aspect = width / height
       camera.updateProjectionMatrix()
-      resolveCamera()
-      previousCamera = cameraState
+      if (running || renderedViewport.width === 0) {
+        resolveCamera()
+        previousCamera = cameraState
+      }
       draw()
       renderedViewport = { width, height }
     }
@@ -453,10 +525,19 @@ export function createThreeRuntime(
       sky.step(running, inside)
       publishSky()
       const traveled = previousPosition.distanceTo(travelerState.position)
-      signedSpeed = (traveled / dt) * Math.sign(intent.move.y)
+      const displacement = movementDelta.subVectors(
+        travelerState.position,
+        previousPosition,
+      )
+      displacement.addScaledVector(
+        travelerState.supportUp,
+        -displacement.dot(travelerState.supportUp),
+      )
+      signedSpeed = (displacement.length() / dt) * Math.sign(intent.move.y)
       lastMovement = { move: { ...intent.move }, run: intent.run }
       travelerDistance += traveled
       simulationTime += dt
+      if (!reducedMotion) windSimulationTime += dt
       // No idle bob or automatic camera orbit; reduced motion freezes the score
       // and idle animation, while movement, manual look and jumping stay available.
       travelerView.update(
@@ -464,13 +545,15 @@ export function createThreeRuntime(
         reducedMotion && travelerState.locomotion === "idle" ? 0 : dt,
         signedSpeed,
       )
+      seatTraveler(1)
+      footPlacement?.capture(travelerState.grounded, sampleFootSurface)
       cameraState = applyCameraLook(
         cameraState,
         intent.look,
         dt,
         inside ? 0.35 : undefined,
       )
-      resolveCamera()
+      resolveCamera(dt)
       clearPendingEdges()
     }
     const loop = createFixedStepLoop({
@@ -514,12 +597,15 @@ export function createThreeRuntime(
     observer.observe(canvas)
     const onMotion = (event: MediaQueryListEvent) =>
       guarded(() => {
+        if (event.matches === reducedMotion) return
         // Consume the delivered transition, without re-evaluating the live
         // query during media/style change dispatch. All owners share this value.
         if (event.matches && !reducedMotion) {
           for (const tier of ["low", "balanced", "high"] as const)
             profiles.get(tier).grass.update?.(windTime, false)
         }
+        if (!event.matches)
+          windSimulationTime = windTime + (1 - presentationAlpha) / 60
         reducedMotion = event.matches
         sky.setReducedMotion(reducedMotion)
         input.pause()
@@ -550,6 +636,9 @@ export function createThreeRuntime(
         const node = travelerView.object.getObjectByName(name)
         if (node) footNodes.push(node)
       }
+      footPlacement = createFootPlacement(travelerView.object)
+      seatTraveler(1)
+      footPlacement.capture(travelerState.grounded, sampleFootSurface)
       // Warm geometry at the selected tier's target size and effect cost. Low
       // startup must never allocate High targets just to prepare a later choice.
       const selected = quality.current()
@@ -587,7 +676,7 @@ export function createThreeRuntime(
           simulate(1 / 60)
         }
         // One render after the batch: test progress never depends on RAF speed.
-        draw()
+        draw(1)
       })
     }
     scope.defer(
@@ -706,6 +795,7 @@ export function createThreeRuntime(
         frameIntent = emptyIntent()
         if (running) input.resume()
         if (command === "return-to-clearing" && !running) {
+          presentationAlpha = 1
           travelerState = createInitialPlayerState(motorConfig)
           cameraState = createThirdPersonCameraState(
             travelerState,
@@ -730,7 +820,39 @@ export function createThreeRuntime(
           // Playback can be selected while paused; simulation remains gated.
           sky.command(command, inside)
         }
-        resolveCamera()
+        const beforeCamera = cameraState
+        const beforeFov = currentFov
+        if (
+          command === "view" ||
+          command === "leave-view" ||
+          command === "return-to-clearing"
+        )
+          resolveCamera()
+        if (
+          running &&
+          !reducedMotion &&
+          (command === "view" || command === "leave-view")
+        ) {
+          // UI commands select a destination without consuming simulation time.
+          // The next fixed step eases from the last actual camera pose.
+          cameraState = {
+            ...cameraState,
+            position: beforeCamera.position,
+            target: beforeCamera.target,
+            up: beforeCamera.up,
+            transitioning: true,
+            hideTraveler: cameraState.hideTraveler || beforeCamera.hideTraveler,
+          }
+          previousFov = currentFov = beforeFov
+        }
+        if (command === "return-to-clearing") {
+          seatTraveler(1)
+          footPlacement?.capture(
+            travelerState.grounded,
+            sampleFootSurface,
+            true,
+          )
+        }
         previousCamera = cameraState
         publishSky()
         draw()
@@ -746,8 +868,6 @@ export function createThreeRuntime(
         guarded(() => {
           quality.select(next)
           applyQuality(next)
-          resolveCamera()
-          previousCamera = cameraState
           draw()
         }),
       dispose,

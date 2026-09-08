@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs"
 import * as THREE from "three"
-import { act, cleanup, render, screen } from "@testing-library/react"
+import { act, cleanup, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { ChardinExperience } from "@/components/experience/chardin-experience"
@@ -64,6 +65,9 @@ beforeEach(() => {
 })
 afterEach(() => {
   cleanup()
+  document
+    .querySelectorAll("style[data-layout-test]")
+    .forEach((node) => node.remove())
   vi.unstubAllGlobals()
   vi.unstubAllEnvs()
   window.history.replaceState({}, "", "/")
@@ -230,5 +234,91 @@ it.each(["Space", "Enter"])(
       expect(api.snapshot().grounded).toBe(false)
       key(canvas, "keyup")
     }
+  },
+)
+
+// JSDOM has no layout engine. Evaluate the production media rules explicitly
+// and check flow/scroll/target contracts, leaving measured rectangles to browsers.
+function responsiveStyles(width: number, height: number) {
+  const source = document.createElement("style")
+  source.dataset.layoutTest = ""
+  source.textContent = readFileSync("src/app/globals.css", "utf8").replace(
+    '@import "tailwindcss";',
+    "",
+  )
+  document.head.append(source)
+  const select = (rules: CSSRuleList): string[] =>
+    Array.from(rules).flatMap((rule) => {
+      if (rule.type === CSSRule.STYLE_RULE) return [rule.cssText]
+      if (rule.type !== CSSRule.MEDIA_RULE) return []
+      const media = rule as CSSMediaRule
+      const matches = media.conditionText.split(",").some((query) => {
+        const bound = query.trim().match(/^\(max-(width|height): (\d+)px\)$/)
+        return bound
+          ? (bound[1] === "width" ? width : height) <= Number(bound[2])
+          : false
+      })
+      return matches ? select(media.cssRules) : []
+    })
+  const css = select(source.sheet!.cssRules).join("\n")
+  source.textContent = css
+}
+
+it.each([
+  [393, 851],
+  [393, 727],
+  [768, 1024],
+  [844, 390],
+  [1024, 600],
+])(
+  "keeps pavilion failure status and actions in responsive normal flow at %ix%i",
+  async (width, height) => {
+    responsiveStyles(width, height)
+    window.history.replaceState({}, "", "/?e2e=1&landmarkFailure=1")
+    const user = userEvent.setup()
+    const { container } = render(<ChardinExperience />)
+    const enter = await screen.findByRole("button", { name: "Enter Chardin" })
+    const notice = container.querySelector(".pavilion-availability")!
+    expect(notice.closest(".welcome-panel")).toBe(enter.closest("section"))
+    expect(notice).toHaveAttribute("role", "status")
+    const style = getComputedStyle(notice)
+    expect(style.position).toBe("static")
+    expect(style.pointerEvents).not.toBe("none")
+    expect(style.maxWidth).toBe("100%")
+    expect(style.overflowWrap).toBe("anywhere")
+    const panel = getComputedStyle(enter.closest("section")!)
+    expect(panel.overflow).toBe("auto")
+    expect(panel.maxHeight).toBe("100%")
+    expect(getComputedStyle(enter).minHeight).toBe("44px")
+    expect(
+      notice.compareDocumentPosition(enter) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    await user.click(enter)
+    expect(window.__CHARDIN_TEST__!.snapshot().running).toBe(true)
+    expect(container.querySelector(".status-line")).toHaveTextContent(
+      "The pavilion is unavailable",
+    )
+    await user.click(screen.getByText("Light and view"))
+    expect(container.querySelector(".sky-panel")).toHaveTextContent(
+      "The pavilion is unavailable",
+    )
+    await user.click(
+      within(
+        screen.getByRole("navigation", { name: "Experience controls" }),
+      ).getByRole("button", { name: "Pause" }),
+    )
+    const retry = screen.getByRole("button", { name: "Retry pavilion" })
+    expect(
+      container.querySelector(".pause-panel .pavilion-availability"),
+    ).toHaveAttribute("role", "status")
+    await user.click(screen.getByRole("button", { name: "About the pavilion" }))
+    expect(
+      screen.getByRole("region", { name: "About the pavilion" }),
+    ).toBeVisible()
+    await user.keyboard("{Escape}")
+    await user.click(retry)
+    expect(
+      await screen.findByRole("button", { name: "Enter Chardin" }),
+    ).toBeEnabled()
   },
 )

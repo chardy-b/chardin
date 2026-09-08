@@ -19,9 +19,11 @@ const palette = Object.fromEntries(
   Object.entries({
     coat: 0xa75e48,
     linen: 0xd6c7a0,
-    leather: 0x55594b,
+    leather: 0x51473f,
+    trouser: 0x454e5b,
+    hair: 0x43382f,
     skin: 0xbc8967,
-    sole: 0x424d44,
+    sole: 0x343934,
     seam: 0x854c3c,
   }).map(([name, color]) => [
     name,
@@ -36,7 +38,7 @@ const palette = Object.fromEntries(
 const root = new THREE.Group()
 root.name = "Traveler"
 root.userData.authoring = {
-  version: 2,
+  version: 3,
   forward: "-Z",
   units: "world units",
   walk: { duration: 0.8, speed: 1.65, stance: 0.5 },
@@ -55,10 +57,10 @@ function group(name, position, parent = root) {
 function loft(rings, sides = 8) {
   const positions = [],
     indices = []
-  for (const [y, rx, rz, z = 0] of rings)
+  for (const [y, rx, rz, z = 0, x = 0] of rings)
     for (let i = 0; i < sides; i++) {
       const a = (2 * Math.PI * i) / sides
-      positions.push(Math.cos(a) * rx, y, Math.sin(a) * rz + z)
+      positions.push(Math.cos(a) * rx + x, y, Math.sin(a) * rz + z)
     }
   for (let r = 0; r < rings.length - 1; r++)
     for (let i = 0; i < sides; i++) {
@@ -91,10 +93,10 @@ const torso = group("Torso", [0, 0.62, 0])
 mesh(
   "Coat",
   [
-    [-0.14, 0.235, 0.155],
-    [-0.1, 0.23, 0.15],
-    [0.12, 0.165, 0.12],
-    [0.24, 0.205, 0.13],
+    [-0.12, 0.205, 0.13, 0.025],
+    [-0.07, 0.225, 0.145, 0.015],
+    [0.1, 0.155, 0.105],
+    [0.23, 0.205, 0.12, -0.012],
     [0.28, 0.115, 0.095],
   ],
   "coat",
@@ -115,10 +117,10 @@ const head = group("Head", [0, 0.39, -0.015], torso)
 mesh(
   "Face",
   [
-    [-0.085, 0.075, 0.075],
-    [-0.05, 0.12, 0.105],
-    [0.08, 0.128, 0.112],
-    [0.135, 0.09, 0.085],
+    [-0.085, 0.058, 0.06, -0.018],
+    [-0.035, 0.103, 0.095, -0.012],
+    [0.055, 0.122, 0.105],
+    [0.12, 0.086, 0.075, 0.012],
   ],
   "skin",
   head,
@@ -126,13 +128,37 @@ mesh(
 mesh(
   "Hair",
   [
-    [0.07, 0.13, 0.114],
-    [0.13, 0.12, 0.103],
-    [0.16, 0.06, 0.06],
+    [-0.025, 0.077, 0.05, 0.068],
+    [0.055, 0.124, 0.101, 0.018],
+    [0.13, 0.102, 0.085, 0.014, -0.024],
+    [0.165, 0.033, 0.043, 0, -0.045],
   ],
-  "leather",
+  "hair",
   head,
-  [0, 0, 0.012],
+)
+mesh(
+  "HairSweep",
+  [
+    [0.045, 0.028, 0.038],
+    [0.09, 0.065, 0.052, 0, -0.025],
+    [0.145, 0.072, 0.044, 0.015, -0.045],
+  ],
+  "hair",
+  head,
+  [0.07, 0, -0.067],
+  6,
+)
+mesh(
+  "Nose",
+  [
+    [-0.03, 0.023, 0.019],
+    [0, 0.024, 0.044, -0.013],
+    [0.035, 0.018, 0.012],
+  ],
+  "skin",
+  head,
+  [0, 0, -0.101],
+  5,
 )
 mesh(
   "ScarfCollar",
@@ -156,14 +182,14 @@ mesh(
   [0, 0, 0],
   4,
 )
-const pack = group("Pack", [0, 0.04, 0.17], torso)
+const pack = group("Pack", [-0.02, 0.065, 0.145], torso)
 mesh(
   "PackBody",
   [
-    [-0.13, 0.105, 0.052],
-    [-0.08, 0.145, 0.07],
-    [0.13, 0.13, 0.065],
-    [0.17, 0.095, 0.045],
+    [-0.145, 0.055, 0.032, 0, 0.02],
+    [-0.07, 0.115, 0.053],
+    [0.115, 0.106, 0.051],
+    [0.155, 0.072, 0.035, 0, -0.02],
   ],
   "leather",
   pack,
@@ -171,9 +197,9 @@ mesh(
 mesh(
   "PackFlap",
   [
-    [0.04, 0.125, 0.018],
-    [0.15, 0.14, 0.03],
-    [0.18, 0.095, 0.02],
+    [0.075, 0.07, 0.015, 0, 0.012],
+    [0.14, 0.108, 0.022],
+    [0.165, 0.072, 0.017, 0, -0.02],
   ],
   "linen",
   pack,
@@ -197,7 +223,7 @@ for (const [side, sign] of [
   ["Left", -1],
   ["Right", 1],
 ]) {
-  const leg = group(`${side}Leg`, [sign * 0.105, 0.62, 0])
+  const leg = group(`${side}Leg`, [sign * 0.125, 0.62, 0])
   mesh(
     `${side}Trouser`,
     [
@@ -205,7 +231,7 @@ for (const [side, sign] of [
       [-0.05, 0.065, 0.06],
       [0, 0.07, 0.065],
     ],
-    "leather",
+    "trouser",
     leg,
   )
   const knee = group(`${side}Knee`, [0, -L, 0], leg)
@@ -215,7 +241,7 @@ for (const [side, sign] of [
       [-L + 0.04, 0.048, 0.046],
       [0, 0.054, 0.052],
     ],
-    "leather",
+    "trouser",
     knee,
   )
   const ankle = group(`${side}Ankle`, [0, -L, 0], knee)
@@ -234,8 +260,8 @@ for (const [side, sign] of [
   mesh(
     `${side}Sleeve`,
     [
-      [-0.2, 0.056, 0.052],
-      [-0.03, 0.073, 0.063],
+      [-0.2, 0.043, 0.043],
+      [-0.065, 0.061, 0.052],
       [0.02, 0.06, 0.055],
     ],
     "coat",
@@ -245,8 +271,8 @@ for (const [side, sign] of [
   mesh(
     `${side}Cuff`,
     [
-      [-0.16, 0.044, 0.045],
-      [0, 0.055, 0.052],
+      [-0.16, 0.035, 0.039],
+      [0, 0.045, 0.043],
     ],
     "coat",
     elbow,
@@ -263,9 +289,10 @@ for (const [side, sign] of [
     [0, -0.18, 0],
   )
 }
-const axis = new THREE.Vector3(1, 0, 0)
-const quat = (angle) =>
-  new THREE.Quaternion().setFromAxisAngle(axis, angle).toArray()
+const quat = (angle, yaw = 0, roll = 0) =>
+  new THREE.Quaternion()
+    .setFromEuler(new THREE.Euler(angle, yaw, roll, "YXZ"))
+    .toArray()
 function makeClip(name, duration, sample) {
   const data = new Map(),
     times = []
@@ -298,7 +325,9 @@ function pose(phase, speed, duration, stance, jump = false) {
   const tracks = {
     "Torso.position": [0, hip, 0],
     "Torso.quaternion": quat(
-      moving ? -0.025 - speed * 0.016 + cycle * 0.012 : 0,
+      moving ? -0.045 - speed * 0.055 + cycle * 0.018 : 0,
+      moving ? cycle * 0.055 : 0,
+      moving ? cycle * 0.018 : 0,
     ),
     "Scarf.quaternion": quat(
       moving
@@ -321,8 +350,11 @@ function pose(phase, speed, duration, stance, jump = false) {
     else if (moving) {
       const t = (p - stance) / (1 - stance)
       const smooth = t * t * (3 - 2 * t)
-      z = stride / 2 - stride * smooth
-      lift = (speed > 2 ? 0.18 : 0.1) * Math.sin(Math.PI * t) ** 2
+      z =
+        stride / 2 -
+        stride * smooth +
+        speed * duration * (1 - stance) * (2 * t * t * t - 3 * t * t + t)
+      lift = (speed > 2 ? 0.25 : 0.1) * Math.sin(Math.PI * t) ** 2
     }
     if (jump) {
       lift = 0.11 * Math.sin(Math.PI * phase) ** 2
@@ -332,7 +364,7 @@ function pose(phase, speed, duration, stance, jump = false) {
     const bend = Math.acos(Math.min(1, Math.hypot(down, z) / (2 * L)))
     const thigh = Math.atan2(-z, down) + bend
     const knee = -bend * 2
-    tracks[`${side}Leg.position`] = [sign * 0.105, hip, 0]
+    tracks[`${side}Leg.position`] = [sign * 0.125, hip, 0]
     tracks[`${side}Leg.quaternion`] = quat(thigh)
     tracks[`${side}Knee.quaternion`] = quat(knee)
     tracks[`${side}Ankle.quaternion`] = quat(-thigh - knee)
@@ -340,10 +372,14 @@ function pose(phase, speed, duration, stance, jump = false) {
       jump
         ? -0.9 * Math.sin(Math.PI * phase)
         : moving
-          ? z * (speed > 2 ? 2.3 : 1.6)
+          ? -Math.sin((p + 0.08) * Math.PI * 2) * (speed > 2 ? 0.95 : 0.55)
           : 0.04,
+      0,
+      moving ? sign * 0.18 : 0,
     )
-    tracks[`${side}Elbow.quaternion`] = quat(moving ? 0.12 + speed * 0.1 : 0.08)
+    tracks[`${side}Elbow.quaternion`] = quat(
+      moving ? 0.25 + speed * 0.16 + 0.14 * Math.sin(p * Math.PI * 2) : 0.08,
+    )
   }
   return tracks
 }
