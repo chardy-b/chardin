@@ -1,0 +1,143 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="1000"
+  height="720"
+  viewBox="0 0 1000 720"
+  role="img"
+  aria-labelledby="title desc"
+>
+  <title id="title">Original Chardin pavilion plan and local section</title>
+  <desc id="desc">
+    A rectangular chamber has a centered entry ramp and skewed roof opening. The
+    section shows a level floor raised above a curved planet, with a continuous
+    ramp and sky sightline. Dimensions and transforms are authoritative in the
+    adjacent WIL-124 design.
+  </desc>
+  <defs>
+    <marker
+      id="arrow"
+      markerWidth="8"
+      markerHeight="8"
+      refX="7"
+      refY="4"
+      orient="auto-start-reverse"
+    >
+      <path d="M0 0 L8 4 L0 8 Z" fill="#34494b" />
+    </marker>
+  </defs>
+  <rect width="1000" height="720" fill="#f7f4ec" />
+  <g font-family="system-ui, sans-serif" fill="#263b3e">
+    <text x="36" y="38" font-size="23">
+      Chardin · WIL-124 construction reference
+    </text>
+    <text x="36" y="63" font-size="13">
+      Original vector drawing · 2026-09-08 · schematic projection, not rendered
+      evidence
+    </text>
+    <text x="36" y="101" font-size="18">Plan · local x / z</text>
+    <text x="508" y="101" font-size="18">Section · local z / y (x = 0)</text>
+  </g>
+  <g
+    transform="translate(245 293) scale(90)"
+    stroke="#34494b"
+    stroke-width=".015"
+  >
+    <rect x="-1.32" y="-1.52" width="2.64" height="3.04" fill="#bbb7a5" />
+    <rect x="-1.2" y="-1.4" width="2.4" height="2.8" fill="#dfd9ca" />
+    <rect x="-.65" y="1.4" width="1.3" height="1.85" fill="#b7aa95" />
+    <path
+      d="M-.55 -.75 L.65 -.55 L.50 .40 L-.35 .40 Z"
+      fill="#bfcfd1"
+      stroke-dasharray=".055 .04"
+    />
+    <rect
+      x="-.25"
+      y=".30"
+      width=".50"
+      height=".40"
+      fill="none"
+      stroke-dasharray=".04 .03"
+    />
+    <path
+      d="M0 3.65 L0 3.25 L0 1.65 L0 1.4 L0 .50"
+      fill="none"
+      stroke-width=".025"
+      marker-end="url(#arrow)"
+    />
+    <g fill="#34494b">
+      <circle cx="0" cy="3.65" r=".04" />
+      <circle cx="0" cy="3.25" r=".04" />
+      <circle cx="0" cy="1.65" r=".04" />
+      <circle cx="0" cy="1.4" r=".04" />
+      <circle cx="0" cy=".5" r=".04" />
+    </g>
+  </g>
+  <g fill="#263b3e" font-family="system-ui, sans-serif" font-size="13">
+    <text x="318" y="241">Roof opening</text>
+    <text x="318" y="258">dashed projection</text>
+    <text x="292" y="327">P4 · view zone</text>
+    <text x="312" y="417">P3 · threshold</text>
+    <text x="312" y="448">P2 · landing</text>
+    <text x="312" y="540">Ramp</text>
+    <text x="262" y="589">P1</text>
+    <text x="262" y="625">P0 · grass approach</text>
+    <text x="152" y="139">Clear width 2.40</text>
+    <text x="38" y="347" transform="rotate(-90 38 347)">Clear depth 2.80</text>
+  </g>
+  <g
+    transform="translate(659 376) scale(65 -65)"
+    stroke="#34494b"
+    stroke-width=".018"
+  >
+    <path
+      d="M-2 -0.39 Q0 .08 1.5 -.20 Q2.5 -.58 3.25 -1.16 Q3.7 -1.56 4 -1.95 L4 -2.7 L-2 -2.7 Z"
+      fill="#87915a"
+    />
+    <path
+      d="M-1.52 0 L1.65 0 L1.65 .12 C2.1 .12 2.8 -.78 3.25 -1.16 L3.25 -1.25 Q1.8 -.34 -1.52 -.24 Z"
+      fill="#aaa18f"
+    />
+    <path
+      d="M-1.52 .12 L-1.52 2.35 L-.70 2.35 L-.70 2.23 L-1.40 2.23 L-1.40 .12 Z"
+      fill="#bbb7a5"
+    />
+    <path d="M.40 2.23 L1.52 2.23 L1.52 2.35 L.40 2.35 Z" fill="#bbb7a5" />
+    <rect x="1.40" y="1.87" width=".12" height=".36" fill="#bbb7a5" />
+    <path d="M-1.40 .12 L1.65 .12" fill="none" stroke-width=".04" />
+    <path
+      d="M.50 1.37 L-.46 2.62 M.50 1.37 L.31 2.62"
+      fill="none"
+      stroke="#637e86"
+      stroke-dasharray=".05 .04"
+    />
+    <circle cx=".50" cy="1.37" r=".045" fill="#34494b" />
+    <path d="M.50 .12 L.50 1.30" fill="none" stroke-width=".05" />
+  </g>
+  <g fill="#263b3e" font-family="system-ui, sans-serif" font-size="13">
+    <text x="532" y="163">Sky beyond the real opening</text>
+    <text x="775" y="221">Roof top y = 2.35</text>
+    <text x="775" y="241">Underside y = 2.23</text>
+    <text x="543" y="286">Eye y = 1.37</text>
+    <text x="521" y="352">Floor y = .12</text>
+    <text x="802" y="359">Continuous ramp</text>
+    <text x="733" y="497">Motor sphere Rg = 5.03</text>
+    <text x="548" y="539">Terrain remains beneath the closed base.</text>
+    <text x="548" y="561">Return along the same route at any phase.</text>
+  </g>
+  <g fill="none" stroke="#34494b" stroke-width="1.5" marker-end="url(#arrow)">
+    <path d="M60 601 L111 601" />
+    <path d="M60 601 L60 644" />
+    <path d="M552 626 L603 626" />
+    <path d="M552 626 L552 583" />
+  </g>
+  <g fill="#263b3e" font-family="system-ui, sans-serif" font-size="13">
+    <text x="116" y="605">+x = right</text>
+    <text x="37" y="662">+z = entry</text>
+    <text x="610" y="630">+z</text>
+    <text x="537" y="577">+y = up</text>
+    <text x="36" y="699">
+      World position = anchor + x·right + y·up − z·forward · coordinates in
+      wil124-skyspace.md govern.
+    </text>
+  </g>
+</svg>
