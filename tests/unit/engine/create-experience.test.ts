@@ -47,7 +47,9 @@ describe("createExperience", () => {
       "ready",
     ])
     expect(experience.start()).toBe(true)
+    expect(experience.start()).toBe(false)
     experience.pause()
+    experience.resume()
     experience.resume()
     experience.dispose()
     experience.dispose()

@@ -40,15 +40,42 @@ test.describe("Chardin world", () => {
       Number(await canvas.getAttribute("data-traveler-distance")),
     ).toBeGreaterThan(0.5)
 
-    await page.keyboard.press("Escape")
+    await page.keyboard.down("Escape")
     await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible()
     const paused = await canvas.screenshot()
+    const distanceAtPause = await canvas.getAttribute("data-traveler-distance")
+    await expect(canvas).toHaveAttribute("data-traveler-grounded", "true")
+    await page.keyboard.down("Space")
+    await page.keyboard.down("KeyE")
     await page.keyboard.down("KeyW")
     await page.waitForTimeout(500)
     await page.keyboard.up("KeyW")
     expect((await canvas.screenshot()).equals(paused)).toBe(true)
-    await page.getByRole("button", { name: "Resume" }).click()
+    if (process.env.CHARDIN_EVIDENCE_DIR) {
+      await page.screenshot({
+        path: `${process.env.CHARDIN_EVIDENCE_DIR}/desktop-paused.png`,
+        fullPage: true,
+      })
+    }
+    await page.getByRole("button", { name: "Resume" }).evaluate((button) => {
+      ;(button as HTMLButtonElement).click()
+      for (const code of ["Escape", "Space", "KeyE"]) {
+        window.dispatchEvent(
+          new KeyboardEvent("keydown", { code, repeat: true }),
+        )
+      }
+    })
     await expect(page.locator(".status-line")).toContainText("running")
+    await page.waitForTimeout(150)
+    await expect(page.locator(".status-line")).toContainText("running")
+    await expect(canvas).toHaveAttribute("data-traveler-grounded", "true")
+    await expect(canvas).toHaveAttribute(
+      "data-traveler-distance",
+      distanceAtPause!,
+    )
+    await page.keyboard.up("Escape")
+    await page.keyboard.up("Space")
+    await page.keyboard.up("KeyE")
     const guide = page.getByRole("button", { name: "How to move" })
     await guide.focus()
     await page.keyboard.press("Space")
@@ -62,7 +89,20 @@ test.describe("Chardin world", () => {
     expect(errors).toEqual([])
     if (process.env.CHARDIN_EVIDENCE_DIR) {
       await page.screenshot({
-        path: `${process.env.CHARDIN_EVIDENCE_DIR}/desktop-running.png`,
+        path: `${process.env.CHARDIN_EVIDENCE_DIR}/desktop-resumed.png`,
+        fullPage: true,
+      })
+      await page.setViewportSize({ width: 820, height: 1180 })
+      await page.getByRole("button", { name: "Pause", exact: true }).click()
+      await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible()
+      await page.screenshot({
+        path: `${process.env.CHARDIN_EVIDENCE_DIR}/tablet-paused.png`,
+        fullPage: true,
+      })
+      await page.getByRole("button", { name: "Resume" }).click()
+      await expect(page.locator(".status-line")).toContainText("running")
+      await page.screenshot({
+        path: `${process.env.CHARDIN_EVIDENCE_DIR}/tablet-resumed.png`,
         fullPage: true,
       })
     }
@@ -152,22 +192,31 @@ test.describe("Chardin world", () => {
     })
     const afterLook = await canvas.screenshot()
     expect(afterLook.equals(afterMovement)).toBe(false)
-    if (process.env.CHARDIN_EVIDENCE_DIR) {
-      await page.screenshot({
-        path: `${process.env.CHARDIN_EVIDENCE_DIR}/mobile-touch-running.png`,
-        fullPage: true,
-      })
-    }
     const touchPause = page
       .getByLabel("Touch controls")
       .getByRole("button", { name: "Pause" })
     await touchPause.tap()
     await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible()
     const paused = await canvas.screenshot()
+    await touchPause.tap({ force: true })
     await page.waitForTimeout(400)
     expect((await canvas.screenshot()).equals(paused)).toBe(true)
+    if (process.env.CHARDIN_EVIDENCE_DIR) {
+      await page.screenshot({
+        path: `${process.env.CHARDIN_EVIDENCE_DIR}/mobile-paused.png`,
+        fullPage: true,
+      })
+    }
     await page.getByRole("button", { name: "Resume" }).tap()
     await expect(page.locator(".status-line")).toContainText("running")
+    await page.waitForTimeout(150)
+    await expect(page.locator(".status-line")).toContainText("running")
+    if (process.env.CHARDIN_EVIDENCE_DIR) {
+      await page.screenshot({
+        path: `${process.env.CHARDIN_EVIDENCE_DIR}/mobile-resumed.png`,
+        fullPage: true,
+      })
+    }
     expect(errors).toEqual([])
     const shell = await page.locator("main").boundingBox()
     expect(shell?.height).toBeGreaterThanOrEqual(

@@ -36,6 +36,7 @@ function isInteractiveTarget(target: EventTarget | null) {
 export class KeyboardInput implements InputAdapter {
   private readonly keys = new Set<string>()
   private readonly pressedEdges = new Set<string>()
+  private readonly suppressedEdgesUntilKeyUp = new Set<string>()
   private disposed = false
 
   constructor(private readonly target: Window) {
@@ -47,6 +48,10 @@ export class KeyboardInput implements InputAdapter {
     if (!HANDLED_CODES.has(event.code)) return
     if (isInteractiveTarget(event.target)) return
     event.preventDefault()
+    if (this.suppressedEdgesUntilKeyUp.has(event.code)) {
+      if (event.repeat) return
+      this.suppressedEdgesUntilKeyUp.delete(event.code)
+    }
     if (!event.repeat && EDGE_CODES.has(event.code))
       this.pressedEdges.add(event.code)
     this.keys.add(event.code)
@@ -56,10 +61,12 @@ export class KeyboardInput implements InputAdapter {
     if (!HANDLED_CODES.has(event.code)) return
     if (isInteractiveTarget(event.target)) {
       this.keys.delete(event.code)
+      this.suppressedEdgesUntilKeyUp.delete(event.code)
       return
     }
     event.preventDefault()
     this.keys.delete(event.code)
+    this.suppressedEdgesUntilKeyUp.delete(event.code)
   }
 
   sample(): PartialControlIntent {
@@ -88,6 +95,9 @@ export class KeyboardInput implements InputAdapter {
   }
 
   clear() {
+    for (const code of this.keys) {
+      if (EDGE_CODES.has(code)) this.suppressedEdgesUntilKeyUp.add(code)
+    }
     this.keys.clear()
     this.pressedEdges.clear()
   }
