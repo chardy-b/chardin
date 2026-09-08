@@ -46,8 +46,22 @@ export class KeyboardInput implements InputAdapter {
 
   private onKeyDown = (event: KeyboardEvent) => {
     if (!HANDLED_CODES.has(event.code)) return
-    if (isInteractiveTarget(event.target)) return
+    if (
+      isInteractiveTarget(event.target) ||
+      this.target.document.querySelector(
+        "dialog[open], [role=dialog][aria-modal=true]",
+      )
+    )
+      return
     event.preventDefault()
+    // A held key may have started on a control/modal that owns its keydown.
+    // Repeats after focus returns must never manufacture a gameplay edge.
+    if (
+      event.repeat &&
+      EDGE_CODES.has(event.code) &&
+      !this.keys.has(event.code)
+    )
+      return
     if (this.suppressedEdgesUntilKeyUp.has(event.code)) {
       if (event.repeat) return
       this.suppressedEdgesUntilKeyUp.delete(event.code)
@@ -70,6 +84,14 @@ export class KeyboardInput implements InputAdapter {
   }
 
   sample(): PartialControlIntent {
+    if (
+      this.target.document.querySelector(
+        "dialog[open], [role=dialog][aria-modal=true]",
+      )
+    ) {
+      this.clear()
+      return {}
+    }
     if (this.disposed || (this.keys.size === 0 && this.pressedEdges.size === 0))
       return {}
     const x =

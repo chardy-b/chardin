@@ -13,14 +13,18 @@ export interface PlayerMotorConfig {
   gravity: number
 }
 
-export interface SurfaceCollider {
-  groundRadiusAt(surfaceNormal: THREE.Vector3): number
-}
+export type { SurfaceCollider } from "@/engine/world/skyspace-collider"
+import type { SurfaceCollider } from "@/engine/world/skyspace-collider"
+import { stepSupportedMotor } from "@/engine/player/supported-motor"
 
 export function createInitialPlayerState(
   config: PlayerMotorConfig,
 ): TravelerState {
   return {
+    velocity: new THREE.Vector3(),
+    supportUp: new THREE.Vector3(0, 1, 0),
+    supportId: "planet",
+    previousGroundedSupport: "planet",
     position: config.planetCenter
       .clone()
       .add(new THREE.Vector3(0, config.groundRadius, 0)),
@@ -36,7 +40,16 @@ export function stepPlayerMotor(
   intent: ControlIntent,
   config: PlayerMotorConfig,
   dt: number,
+  collider?: SurfaceCollider,
 ): TravelerState {
+  if (
+    collider &&
+    !(
+      state.previousGroundedSupport === "planet" &&
+      collider.nearLandmark?.(state.position) === false
+    )
+  )
+    return stepSupportedMotor(state, intent, config, dt, collider)
   const radial = state.position.clone().sub(config.planetCenter)
   const radius = Math.max(radial.length(), config.groundRadius)
   const up = radial.normalize()
@@ -77,6 +90,10 @@ export function stepPlayerMotor(
   }
 
   return {
+    velocity: nextUp.clone().multiplyScalar(radialVelocity),
+    supportUp: nextUp.clone(),
+    supportId: grounded ? "planet" : "air",
+    previousGroundedSupport: "planet",
     position: config.planetCenter.clone().addScaledVector(nextUp, nextRadius),
     forward,
     radialVelocity,

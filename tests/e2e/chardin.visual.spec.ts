@@ -24,6 +24,9 @@ test("deterministic spawn and travel have real screenshot baselines", async ({
     "data-traveler-model",
     "loaded",
   )
+  // WIL-125 intentionally changes the visible pavilion and Light/view UI.
+  // Keep exact comparisons: controller-reviewed replacements are required
+  // after the production regressions pass (docs/design/wil125-validation.md).
   await expect(page).toHaveScreenshot("spawn.png")
   const before = await page.evaluate(() => window.__CHARDIN_TEST__!.snapshot())
   await page.evaluate(() =>
@@ -153,10 +156,17 @@ test("quality and live motion changes preserve simulation and bounded resources"
     (await page.evaluate(() => window.__CHARDIN_TEST__!.snapshot())).distance,
   ).toBeGreaterThan(0)
   await page.emulateMedia({ reducedMotion: "no-preference" })
-  await expect(page.locator("canvas")).toHaveAttribute(
-    "data-reduced-motion",
-    "false",
-  )
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => ({
+          media: matchMedia("(prefers-reduced-motion: reduce)").matches,
+          canvas: document.querySelector("canvas")?.dataset.reducedMotion,
+          engine: window.__CHARDIN_TEST__!.snapshot().reducedMotion,
+        })),
+      { timeout: 15_000 },
+    )
+    .toEqual({ media: false, canvas: "false", engine: false })
 })
 
 test("real context loss rebuilds resources and waits for a resume gesture", async ({

@@ -8,11 +8,13 @@ export async function measureWorkload({
   warmupFrames,
   sampleFrames,
   timeoutMs,
+  stationary = false,
 }: {
   profile: "high" | "low"
   warmupFrames: number
   sampleFrames: number
   timeoutMs: number
+  stationary?: boolean
 }) {
   const api = window.__CHARDIN_TEST__!
   const probe = window.__CHARDIN_PROBE__
@@ -69,7 +71,8 @@ export async function measureWorkload({
           probe.resetFrame()
           const before = performance.now()
           // Same deterministic pole-crossing route in each fresh browser context.
-          api.step(1, { move: { x: 0, y: 1 }, run: true })
+          if (stationary) api.step(1)
+          else api.step(1, { move: { x: 0, y: 1 }, run: true })
           gl.finish()
           const completedFrameMs = performance.now() - before
           const counters = probe.snapshot()

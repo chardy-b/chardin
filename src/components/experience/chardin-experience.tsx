@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react"
 import type { Quality } from "@/engine/quality/quality-controller"
 import type { Experience, ExperienceState } from "@/engine/contracts"
 import { createExperience } from "@/engine/create-experience"
+import { PavilionDescription } from "@/components/experience/pavilion-description"
+import type { SkyStatus, SkyCommand } from "@/engine/world/sky-controller"
 import { TouchControls } from "@/components/experience/touch-controls"
 
 export function ChardinExperience() {
@@ -14,6 +16,52 @@ export function ChardinExperience() {
   const [state, setState] = useState<ExperienceState>({ status: "checking" })
   const [quality, setQuality] = useState<Quality>("low")
   const [helpOpen, setHelpOpen] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
+  const helpRef = useRef<HTMLButtonElement>(null)
+  const aboutRef = useRef<HTMLButtonElement>(null)
+  const lifecycleRef = useRef<HTMLDivElement>(null)
+  const [sky, setSky] = useState<SkyStatus>({
+    phase: "Settle",
+    playback: "ready",
+    inside: false,
+    viewingZone: false,
+    viewing: false,
+    available: false,
+    scoreAvailable: true,
+    reducedMotion: false,
+  })
+  const command = (value: SkyCommand) =>
+    experienceRef.current?.skyCommand(value)
+  const runtimeReady = ["running", "paused"].includes(state.status)
+  const liveDisabled =
+    !runtimeReady ||
+    !sky.available ||
+    !sky.inside ||
+    !sky.scoreAvailable ||
+    sky.reducedMotion
+  const reason = !runtimeReady
+    ? "Enter or resume the world to use pavilion controls."
+    : !sky.available
+      ? "The pavilion is unavailable. You can still explore the planet."
+      : !sky.inside
+        ? "Walk up the ramp and inside the chamber to start the light sequence."
+        : sky.reducedMotion
+          ? "Reduced motion is on. Choose a still view; automatic playback stays off."
+          : ""
+  const previousLifecycle = useRef(state.status)
+  useEffect(() => {
+    const changed = previousLifecycle.current !== state.status
+    previousLifecycle.current = state.status
+    if (
+      changed &&
+      ["paused", "recovered", "failed", "context-lost"].includes(
+        state.status,
+      ) &&
+      !helpOpen &&
+      !aboutOpen
+    )
+      lifecycleRef.current?.querySelector<HTMLButtonElement>("button")?.focus()
+  }, [state.status, helpOpen, aboutOpen])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -23,6 +71,7 @@ export function ChardinExperience() {
       touchRoot: touchRef.current,
       onState: setState,
       onQuality: setQuality,
+      onSkyStatus: setSky,
     })
     experienceRef.current = experience
     const onVisibilityChange = () => {
@@ -37,10 +86,14 @@ export function ChardinExperience() {
   }, [])
 
   const begin = () => {
+    setHelpOpen(false)
+    setAboutOpen(false)
     experienceRef.current?.start()
     canvasRef.current?.focus()
   }
   const resume = () => {
+    setHelpOpen(false)
+    setAboutOpen(false)
     experienceRef.current?.resume()
     canvasRef.current?.focus()
   }
@@ -85,12 +138,141 @@ export function ChardinExperience() {
         )}
         <button
           type="button"
-          onClick={() => setHelpOpen((open) => !open)}
+          ref={helpRef}
+          onClick={() => {
+            experienceRef.current?.pause()
+            setAboutOpen(false)
+            setHelpOpen((open) => !open)
+            helpRef.current?.focus()
+          }}
           aria-expanded={helpOpen}
         >
           {helpOpen ? "Close guide" : "How to move"}
         </button>
+        <button
+          ref={aboutRef}
+          type="button"
+          aria-expanded={aboutOpen}
+          onClick={() => {
+            experienceRef.current?.pause()
+            setHelpOpen(false)
+            setAboutOpen((open) => !open)
+            aboutRef.current?.focus()
+          }}
+        >
+          About the pavilion
+        </button>
       </div>
+      <aside className="description-panel" hidden={!aboutOpen}>
+        <button
+          type="button"
+          onClick={() => {
+            setAboutOpen(false)
+            aboutRef.current?.focus()
+          }}
+        >
+          Close description
+        </button>
+        <PavilionDescription />
+      </aside>
+      {!sky.available &&
+        ["ready", "running", "paused", "recovered"].includes(state.status) && (
+          <p className="pavilion-availability" role="status">
+            The pavilion is unavailable. You can still explore the planet.
+          </p>
+        )}
+      <details className="sky-panel">
+        <summary>Light and view</summary>
+        <p>
+          {!runtimeReady
+            ? "Pavilion controls are available after Enter."
+            : sky.available
+              ? `${sky.phase} · ${sky.playback}${sky.viewing ? " · Aperture view" : ""}`
+              : "The pavilion is unavailable. You can still explore the planet."}
+        </p>
+        <p id="pavilion-control-reason">{reason}</p>
+        {!sky.scoreAvailable && (
+          <p>
+            The light sequence is unavailable. Neutral Still light remains
+            available.
+          </p>
+        )}
+        <div
+          className="pavilion-buttons"
+          aria-describedby="pavilion-control-reason"
+        >
+          <button
+            type="button"
+            disabled={liveDisabled}
+            onClick={() =>
+              command(
+                sky.playback === "ready" || sky.playback === "complete"
+                  ? "start"
+                  : "continue",
+              )
+            }
+          >
+            {sky.playback === "complete"
+              ? "Restart light sequence"
+              : sky.playback === "ready"
+                ? "Start light sequence"
+                : "Continue light sequence"}
+          </button>
+          <button
+            type="button"
+            disabled={
+              !runtimeReady || !sky.available || sky.playback !== "playing"
+            }
+            onClick={() => command("freeze")}
+          >
+            Freeze light sequence
+          </button>
+          <button
+            type="button"
+            disabled={!runtimeReady || !sky.available}
+            onClick={() => command("still")}
+          >
+            Still light
+          </button>
+          <button
+            type="button"
+            disabled={!runtimeReady || !sky.available || !sky.scoreAvailable}
+            onClick={() => command("previous-still")}
+            onKeyDown={(e) => {
+              if (e.repeat) e.preventDefault()
+            }}
+          >
+            Previous still view
+          </button>
+          <button
+            type="button"
+            disabled={!runtimeReady || !sky.available || !sky.scoreAvailable}
+            onClick={() => command("next-still")}
+            onKeyDown={(e) => {
+              if (e.repeat) e.preventDefault()
+            }}
+          >
+            Next still view
+          </button>
+          <button
+            type="button"
+            disabled={
+              state.status !== "running" ||
+              !sky.available ||
+              (!sky.viewingZone && !sky.viewing)
+            }
+            onClick={() => command(sky.viewing ? "leave-view" : "view")}
+          >
+            {sky.viewing ? "Leave view" : "View aperture"}
+          </button>
+        </div>
+        {!sky.viewingZone && (
+          <p>
+            Stand on the small floor inset to view the aperture. Movement pauses
+            while viewing; E or Leave view returns to walking.
+          </p>
+        )}
+      </details>
       {helpOpen && (
         <aside className="help-panel" aria-label="Movement guide">
           <p>Walk with W/S or ↑/↓. Turn with A/D or ←/→.</p>
@@ -100,10 +282,20 @@ export function ChardinExperience() {
             On touch, use the two pads and action buttons. Standard gamepads are
             supported.
           </p>
+          <p>
+            Find the raised room beyond the curved grass. Approach its single
+            ramp, pass through the open doorway, and stand on the small floor
+            inset. E views or leaves the aperture; Start light sequence is a
+            separate button under Light and view.
+          </p>
+          <p>
+            Return through the same doorway and down the ramp at any time.
+            Escape pauses first. No sound plays.
+          </p>
           <p>Pause whenever you need to step away.</p>
         </aside>
       )}
-      <div className="lifecycle" aria-live="polite">
+      <div ref={lifecycleRef} className="lifecycle" aria-live="polite">
         {(state.status === "checking" || state.status === "loading") && (
           <section className="pause-panel" role="status">
             <p>Preparing the world…</p>
@@ -112,13 +304,13 @@ export function ChardinExperience() {
         )}
         {state.status === "ready" && (
           <section className="welcome-panel">
-            <p className="eyebrow">World foundation · 01</p>
+            <p className="eyebrow">Pavilion · 02</p>
             <h1>
               Follow the curve
               <br />
               of a quiet planet.
             </h1>
-            <p>This first clearing is yours to wander.</p>
+            <p>Walk the curved grass to a quiet room open to the sky.</p>
             <button type="button" className="enter-button" onClick={begin}>
               Enter Chardin
             </button>
@@ -131,12 +323,31 @@ export function ChardinExperience() {
               {state.status === "recovered" ? "Graphics recovered" : "Paused"}
             </h2>
             {state.status === "recovered" && (
-              <p>The world is ready again. Resume when you are ready.</p>
+              <p>
+                The world has reset to the clearing with neutral light. Resume
+                when you are ready.
+              </p>
             )}
             <div className="pause-actions">
               <button type="button" className="enter-button" onClick={resume}>
                 Resume
               </button>
+              {state.status === "paused" && (
+                <button
+                  type="button"
+                  onClick={() => command("return-to-clearing")}
+                >
+                  Return to clearing
+                </button>
+              )}
+              {state.status === "paused" && !sky.available && (
+                <button
+                  type="button"
+                  onClick={() => experienceRef.current?.retry()}
+                >
+                  Retry pavilion
+                </button>
+              )}
             </div>
           </section>
         )}
@@ -166,7 +377,7 @@ export function ChardinExperience() {
             </h1>
             <p>
               {failure === "webgl2"
-                ? "This browser or device cannot provide WebGL2. You can still read about the project and check system health."
+                ? "This browser or device cannot provide WebGL2. About the pavilion describes the full experience and offers still phases without graphics."
                 : "The world stopped safely. Retry to rebuild it, then choose Enter Chardin to play."}
             </p>
             <button
@@ -187,6 +398,9 @@ export function ChardinExperience() {
         />
         <span className="sr-only">Experience status: </span>
         {state.status}
+        {runtimeReady && sky.available && (
+          <span className="sr-only">{`Light sequence: ${sky.phase}, ${sky.playback}.${sky.viewing ? " Aperture view." : ""}`}</span>
+        )}
       </p>
     </main>
   )

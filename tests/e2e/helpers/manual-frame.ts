@@ -2,10 +2,22 @@ import type { Page } from "@playwright/test"
 import type { ControlIntent } from "@/engine/contracts"
 import { finishWebGLFrame } from "./webgl"
 
-/** Capture one completed manual-mode frame without element stability polling. */
+/** Capture the genuine composited world and HTML viewport after the completed
+ * manual frame crosses one presentation barrier, without stepping simulation. */
 export async function captureManualFrame(page: Page) {
-  await page.locator("canvas").evaluate(finishWebGLFrame)
-  return page.screenshot({ animations: "disabled" })
+  await page.locator("canvas").evaluate(finishWebGLFrame, undefined, {
+    timeout: 10_000,
+  })
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+  )
+  return page.screenshot({
+    animations: "allow",
+    scale: "css",
+    fullPage: false,
+    timeout: 30_000,
+  })
 }
 
 /** Compare world pixels independently of browser UI compositing and PNG

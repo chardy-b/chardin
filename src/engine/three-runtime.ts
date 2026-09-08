@@ -30,7 +30,19 @@ import {
 } from "@/engine/quality/quality-controller"
 import { createRenderPipeline } from "@/engine/render/render-pipeline"
 import { createContentProfiles } from "@/engine/world/content-profiles"
-import { createLandmarkAnchor } from "@/engine/world/landmark-anchor"
+import {
+  createSkyspaceLandmark,
+  sphereHeight,
+} from "@/engine/world/skyspace-landmark"
+import { createSkyspaceCollider } from "@/engine/world/skyspace-collider"
+import {
+  createSkyController,
+  chamberOccupancy,
+  inViewingZone,
+  SKY_COMMANDS,
+  type SkyCommand,
+  type SkyStatus,
+} from "@/engine/world/sky-controller"
 import { PLANET_RADIUS } from "@/engine/world/planet"
 
 const emptyIntent = (): ControlIntent => ({
@@ -50,10 +62,16 @@ export function createThreeRuntime(
   const scope = createResourceScope()
   let disposed = false
   let running = false
+  let stopSimulation = () => {}
   const dispose = () => {
     if (disposed) return
     disposed = true
     running = false
+    try {
+      stopSimulation()
+    } catch {
+      /* Continue releasing every owner. */
+    }
     scope.dispose()
   }
   try {
@@ -74,13 +92,16 @@ export function createThreeRuntime(
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0xc3dcd7)
     scene.fog = new THREE.Fog(0xc3dcd7, 15, 35)
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 60)
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.05, 60)
     const renderer = new THREE.WebGLRenderer({
       canvas,
       context,
       antialias: false,
       alpha: false,
       powerPreference: "default",
+      // Manual frames must survive presentation until the controller captures
+      // them. Ordinary play keeps the default disposable drawing buffer.
+      preserveDrawingBuffer: manual,
     })
     scope.defer(() => renderer.dispose())
     // An ambient floor keeps the far hemisphere legible independently of world-up.
@@ -103,14 +124,61 @@ export function createThreeRuntime(
     scope.defer(() => sun.shadow.dispose())
     const contentStart = performance.now()
     const profiles = createContentProfiles()
-    const startupContentMs = performance.now() - contentStart
+    let startupContentMs = performance.now() - contentStart
     scope.defer(() => profiles.dispose())
     let content = profiles.get(quality.current())
     scene.add(content.planet.mesh, content.grass.mesh)
-    scene.userData.landmarkAnchor = createLandmarkAnchor(
-      new THREE.Vector3(),
-      PLANET_RADIUS,
+    let landmark: ReturnType<typeof createSkyspaceLandmark> | undefined
+    let collider: ReturnType<typeof createSkyspaceCollider> | undefined
+    const testParams = manual
+      ? new URLSearchParams(window.location.search)
+      : undefined
+    try {
+      if (testParams?.get("landmarkFailure") === "1")
+        throw new Error("Injected pavilion failure")
+      landmark = createSkyspaceLandmark(
+        profiles.get("low").planet.mesh.material.gradientMap,
+        (tier, direction) => profiles.get(tier).planet.surfaceAt(direction),
+      )
+      collider = createSkyspaceCollider(landmark.structure)
+      scene.add(landmark.object)
+    } catch {
+      collider?.dispose()
+      landmark?.dispose()
+      collider = undefined
+      landmark = undefined
+    }
+    scope.defer(() => {
+      collider?.dispose()
+      landmark?.dispose()
+    })
+    startupContentMs = performance.now() - contentStart
+    const sky = createSkyController(
+      reducedMotion,
+      testParams?.get("scoreFailure") !== "1",
     )
+    let inside = false,
+      viewing = false,
+      viewingZone = false
+    let lastSkyStatus = ""
+    const publishSky = () => {
+      const { phase, playback, scoreAvailable } = sky.snapshot()
+      const status: SkyStatus = {
+        phase,
+        playback,
+        scoreAvailable,
+        inside,
+        viewingZone,
+        viewing,
+        available: !!landmark,
+        reducedMotion,
+      }
+      const key = JSON.stringify(status)
+      if (key !== lastSkyStatus) {
+        lastSkyStatus = key
+        options.onSkyStatus?.(status)
+      }
+    }
     canvas.dataset.travelerModel = "loading"
     const travelerView = createTravelerView({
       onStatus: (status) => {
@@ -136,6 +204,7 @@ export function createThreeRuntime(
     const input = new InputManager(adapters)
     inputOwnsAdapters = true
     scope.defer(() => input.dispose())
+    stopSimulation = () => input.pause()
     const motorConfig: PlayerMotorConfig = {
       planetCenter: new THREE.Vector3(),
       groundRadius: PLANET_RADIUS + 0.03,
@@ -148,7 +217,6 @@ export function createThreeRuntime(
     let travelerState: TravelerState = createInitialPlayerState(motorConfig)
     let travelerDistance = 0
     let simulationTime = 0
-    let environmentTime = 0
     let cameraState = createThirdPersonCameraState(
       travelerState,
       motorConfig.planetCenter,
@@ -175,7 +243,7 @@ export function createThreeRuntime(
     })
     scope.defer(() => pipeline.dispose())
     const placeTravelerAndCamera = () => {
-      const up = travelerState.position.clone().normalize()
+      const up = travelerState.supportUp
       const right = new THREE.Vector3()
         .crossVectors(travelerState.forward, up)
         .normalize()
@@ -188,22 +256,50 @@ export function createThreeRuntime(
       travelerView.object.quaternion.setFromRotationMatrix(basis)
       // Portrait reveals more of the curved horizon while keeping the Traveler central.
       const portrait = camera.aspect < 0.85
+      const local = landmark?.structure.toLocal(travelerState.position)
+      const progress =
+        local &&
+        collider?.nearLandmark?.(travelerState.position) &&
+        Math.abs(local.x) <= 1.7 &&
+        local.z >= -1.8
+          ? THREE.MathUtils.clamp((3.25 - local.z) / 1.6, 0, 1)
+          : 0
       cameraState = updateThirdPersonCamera(
         cameraState,
         travelerState,
         motorConfig.planetCenter,
         {
-          height: portrait ? 2.65 : 2.25,
-          distance: portrait ? 5.5 : 4.4,
-          targetHeight: 0.65,
+          height: THREE.MathUtils.lerp(portrait ? 2.65 : 2.25, 1.35, progress),
+          distance: THREE.MathUtils.lerp(portrait ? 5.5 : 4.4, 0.8, progress),
+          targetHeight: THREE.MathUtils.lerp(0.65, 0.85, progress),
+          supportUp: up,
+          hideTraveler: progress === 1,
+          collider,
+          viewTarget: viewing
+            ? landmark?.structure.toWorld(new THREE.Vector3(0, 2.29, -0.15))
+            : undefined,
         },
       )
+      travelerView.object.visible = !cameraState.hideTraveler
+      const fov = viewing ? (portrait ? 78 : 60) : 42
+      if (camera.fov !== fov) {
+        camera.fov = fov
+        camera.updateProjectionMatrix()
+      }
       camera.position.copy(cameraState.position)
       camera.up.copy(cameraState.up)
       camera.lookAt(cameraState.target)
     }
     const draw = () => {
       if (disposed) return
+      const light = sky.frame()
+      ;(scene.background as THREE.Color).fromArray(light.sky)
+      ;(scene.fog as THREE.Fog).color.fromArray(light.sky)
+      sun.color.fromArray(light.sunColor)
+      sun.intensity = light.sunIntensity
+      sun.position.fromArray(light.sunDirection).multiplyScalar(Math.sqrt(155))
+      pipeline.applyLightFrame(light)
+      landmark?.applyWall(light.wall)
       placeTravelerAndCamera()
       canvas.dataset.travelerDistance = travelerDistance.toFixed(4)
       canvas.dataset.travelerGrounded = String(travelerState.grounded)
@@ -229,6 +325,7 @@ export function createThreeRuntime(
         content = nextContent
         scene.add(content.planet.mesh, content.grass.mesh)
       }
+      landmark?.setQuality(next)
       pipeline.configure(next, reducedMotion, window.devicePixelRatio)
       canvas.dataset.quality = next
       options.onQuality?.(next)
@@ -252,20 +349,40 @@ export function createThreeRuntime(
         return
       }
       const previousPosition = travelerState.position
-      travelerState = stepPlayerMotor(travelerState, intent, motorConfig, dt)
+      if (intent.actionPressed) {
+        if (viewing) viewing = false
+        else if (viewingZone) {
+          viewing = true
+          cameraState.yaw = 0
+          cameraState.pitch = 0
+        }
+      }
+      // Viewing starts only while grounded. Keep that exact supported pose;
+      // even an idle motor step can introduce support-projection roundoff.
+      travelerState = viewing
+        ? { ...travelerState, locomotion: "idle" }
+        : stepPlayerMotor(travelerState, intent, motorConfig, dt, collider)
+      if (landmark) {
+        const local = landmark.structure.toLocal(travelerState.position)
+        inside = chamberOccupancy(local, inside)
+        viewingZone = inViewingZone(local, travelerState.grounded)
+      }
+      sky.step(running, inside)
+      publishSky()
       travelerDistance += previousPosition.distanceTo(travelerState.position)
       simulationTime += dt
-      // No idle bob or automatic camera orbit; reduced motion freezes ambient drift
+      // No idle bob or automatic camera orbit; reduced motion freezes the score
       // and idle animation, while movement, manual look and jumping stay available.
       travelerView.update(
         travelerState,
         reducedMotion && travelerState.locomotion === "idle" ? 0 : dt,
       )
-      if (!reducedMotion && !manual) {
-        environmentTime += dt
-        sun.intensity = 2.4 + Math.sin(environmentTime * 0.06) * 0.08
-      }
-      cameraState = applyCameraLook(cameraState, intent.look, dt)
+      cameraState = applyCameraLook(
+        cameraState,
+        intent.look,
+        dt,
+        inside ? 0.35 : undefined,
+      )
       clearPendingEdges()
     }
     const loop = createFixedStepLoop({
@@ -291,6 +408,11 @@ export function createThreeRuntime(
       cancelFrame: (id) => window.cancelAnimationFrame(id),
     })
     scope.defer(() => loop.dispose())
+    stopSimulation = () => {
+      loop.pause()
+      input.pause()
+      clearPendingEdges()
+    }
     const pause = () => {
       if (disposed) return
       running = false
@@ -302,9 +424,17 @@ export function createThreeRuntime(
     const observer = new ResizeObserver(() => guarded(resize))
     scope.defer(() => observer.disconnect())
     observer.observe(canvas)
-    const onMotion = () =>
+    const onMotion = (event: MediaQueryListEvent) =>
       guarded(() => {
-        reducedMotion = motion.matches
+        // Consume the delivered transition, without re-evaluating the live
+        // query during media/style change dispatch. All owners share this value.
+        reducedMotion = event.matches
+        sky.setReducedMotion(reducedMotion)
+        input.pause()
+        if (running) input.resume()
+        frameIntent = emptyIntent()
+        clearPendingEdges()
+        publishSky()
         canvas.dataset.reducedMotion = String(reducedMotion)
         applyQuality(quality.current())
         draw()
@@ -312,6 +442,7 @@ export function createThreeRuntime(
     motion.addEventListener("change", onMotion)
     scope.defer(() => motion.removeEventListener("change", onMotion))
     canvas.dataset.reducedMotion = String(reducedMotion)
+    publishSky()
     applyQuality(quality.current())
     resize()
     const ready = Promise.all([travelerView.ready, pipeline.ready]).then(() => {
@@ -366,6 +497,27 @@ export function createThreeRuntime(
     scope.defer(
       installTestApi({
         snapshot: () => ({
+          generation: options.generation ?? 0,
+          forward: travelerState.forward.toArray(),
+          supportId: travelerState.supportId,
+          supportUp: travelerState.supportUp.toArray(),
+          localFeet:
+            landmark?.structure.toLocal(travelerState.position).toArray() ?? [],
+          cameraPosition: cameraState.position.toArray(),
+          cameraTarget: cameraState.target.toArray(),
+          cameraMode: cameraState.mode ?? "walking",
+          travelerVisible: travelerView.object.visible,
+          landmarkAvailable: !!landmark,
+          sky: sky.snapshot(),
+          route: landmark
+            ? [
+                new THREE.Vector3(0, sphereHeight(0, 3.65), 3.65),
+                new THREE.Vector3(0, sphereHeight(0, 3.25), 3.25),
+                new THREE.Vector3(0, 0.12, 1.65),
+                new THREE.Vector3(0, 0.12, 1.4),
+                new THREE.Vector3(0, 0.12, 0.5),
+              ].map((p) => landmark!.structure.toWorld(p).toArray())
+            : [],
           position: travelerState.position.toArray(),
           cameraUp: cameraState.up.toArray(),
           grounded: travelerState.grounded,
@@ -380,6 +532,16 @@ export function createThreeRuntime(
           textureCount: renderer.info.memory.textures,
           viewport: { ...renderedViewport },
         }),
+        setSkyTick(tick) {
+          if (!manual || disposed) return
+          sky.setTick(tick)
+          clearPendingEdges()
+          input.pause()
+          frameIntent = emptyIntent()
+          if (running) input.resume()
+          publishSky()
+          guarded(draw)
+        },
         step(frames, intent = {}) {
           stepForTest(frames, (i) => ({
             ...emptyIntent(),
@@ -409,7 +571,39 @@ export function createThreeRuntime(
       previousFrameTime = performance.now()
       if (!manual) loop.resume()
     }
+    const skyCommand = (command: SkyCommand) => {
+      if (!SKY_COMMANDS.includes(command) || disposed) return
+      guarded(() => {
+        clearPendingEdges()
+        input.pause()
+        frameIntent = emptyIntent()
+        if (running) input.resume()
+        if (command === "return-to-clearing" && !running) {
+          travelerState = createInitialPlayerState(motorConfig)
+          cameraState = createThirdPersonCameraState(
+            travelerState,
+            motorConfig.planetCenter,
+          )
+          sky.reset()
+          inside = false
+          viewing = false
+          viewingZone = false
+        } else if (landmark) {
+          if (command === "view" && running && viewingZone) {
+            viewing = true
+            cameraState.yaw = 0
+            cameraState.pitch = 0
+          }
+          if (command === "leave-view") viewing = false
+          // Playback can be selected while paused; simulation remains gated.
+          sky.command(command, inside)
+        }
+        publishSky()
+        draw()
+      })
+    }
     return {
+      skyCommand,
       ready,
       start: run,
       pause,

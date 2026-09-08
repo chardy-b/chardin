@@ -11,6 +11,7 @@ vi.mock("three", async (original) => ({
 vi.mock("@/engine/render/render-pipeline", () => ({
   createRenderPipeline: () => ({
     ready: Promise.resolve(),
+    applyLightFrame: vi.fn(),
     configure: vi.fn(),
     resize: vi.fn(),
     render: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock("@/engine/player/traveler-view", () => ({
   createTravelerView: () => ({
     object: new THREE.Group(),
     ready: Promise.resolve(),
+    applyLightFrame: vi.fn(),
     update: vi.fn(),
     dispose: vi.fn(),
   }),
@@ -128,6 +130,63 @@ it("keeps scripted-intent stepping independent of held hardware input", async ()
   api.stepInput(60)
   expect(api.snapshot().distance).toBeCloseTo(1.65, 4)
   key("keyup", "KeyW")
+})
+
+it("resumes grounded after held keys originate on the focused pause control", async () => {
+  const { api } = await open()
+  experience!.start()
+  key("keydown", "ShiftLeft")
+  key("keydown", "KeyW")
+  api.stepInput(60)
+  key("keyup", "KeyW")
+  key("keyup", "ShiftLeft")
+  key("keydown", "Escape")
+  api.stepInput(1)
+  const paused = api.snapshot()
+  expect(paused.grounded).toBe(true)
+  expect(paused.supportId).toBe("planet")
+
+  const resume = document.createElement("button")
+  document.body.append(resume)
+  resume.focus()
+  try {
+    for (const code of ["Space", "KeyE", "KeyW"])
+      resume.dispatchEvent(
+        new KeyboardEvent("keydown", { code, bubbles: true }),
+      )
+    api.stepInput(30)
+    key("keyup", "KeyW")
+    expect(api.snapshot()).toEqual(paused)
+    experience!.resume()
+    resume.blur()
+    for (const code of ["Escape", "Space", "KeyE"]) key("keydown", code, true)
+    api.stepInput(9)
+    const resumed = api.snapshot()
+    expect(resumed.running).toBe(true)
+    expect(resumed.grounded).toBe(true)
+    expect(resumed.supportId).toBe("planet")
+    expect(resumed.distance).toBeCloseTo(paused.distance, 10)
+    resumed.position.forEach((value, i) =>
+      expect(value).toBeCloseTo(paused.position[i], 10),
+    )
+    expect(resumed.simulationTime - paused.simulationTime).toBeCloseTo(
+      9 / 60,
+      10,
+    )
+
+    // Release and a fresh press still jump, then land on the spherical world.
+    for (const code of ["Escape", "Space", "KeyE"]) key("keyup", code)
+    key("keydown", "Space")
+    api.stepInput(1)
+    expect(api.snapshot().grounded).toBe(false)
+    key("keyup", "Space")
+    api.stepInput(90)
+    expect(api.snapshot().grounded).toBe(true)
+    expect(api.snapshot().supportId).toBe("planet")
+    expect(Math.hypot(...api.snapshot().position)).toBeCloseTo(5.03, 10)
+  } finally {
+    resume.remove()
+  }
 })
 
 it("ignores input stepping outside manual mode and rejects unbounded steps", async () => {

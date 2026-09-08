@@ -37,3 +37,7 @@ git diff --check
 ```
 
 Interpret matches rather than treating a keyword search as copyright proof. The generator should reproduce the inventoried hash; unexpected byte changes require investigation, not automatic baseline replacement. The exact-head full-history secret scan and CodeQL remain separate security gates.
+
+## WIL-125 procedural additions
+
+The original pavilion generator, static definition, light score, HTML description and phase CSS are inventoried as procedural source files alongside the binary/legacy entries. Five existing screenshot entries now record the exact controller-accepted WIL-125 replacements (desktop/mobile spawn and traveled, plus tablet); their source/rights wording and inventory order are preserved. The extended integrity test checks their actual bytes and hashes. [Detailed provenance](design/wil125-provenance.json) records agent-assisted Chardin authorship, parameters, canonical geometry, commands, dependency versions and explicit owner-pending distribution rights. No new third-party creative content, exported model, texture or audio is imported. The controller regenerated and visually accepted the five comparison baselines after behavioral validation; zero-diff assertions remain. Separate pavilion review attachments are not comparison baselines. Existing dependency notices and all unresolved inherited asset rights above remain applicable. Source/hash checks are not independent originality review or legal clearance.

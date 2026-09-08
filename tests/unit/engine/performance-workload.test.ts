@@ -237,3 +237,16 @@ it("keeps fixed timeout layers inside the CI job with no retry or workload overr
     20 * 60_000 - 6 * 60_000,
   )
 })
+
+it("samples an explicitly positioned pavilion scene without changing the Wave 1 traversal workload", async () => {
+  const f = fixture()
+  const result = measureWorkload({
+    profile: "high",
+    ...PERFORMANCE_WORKLOAD,
+    timeoutMs: 300000,
+    stationary: true,
+  })
+  for (let i = 0; i < 360; i++) f.tick()
+  expect((await result).raw).toHaveLength(300)
+  expect(f.step.mock.calls).toEqual(Array.from({ length: 360 }, () => [1]))
+})

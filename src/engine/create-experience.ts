@@ -6,8 +6,10 @@ import type {
 } from "@/engine/contracts"
 import type { Quality } from "@/engine/quality/quality-controller"
 import { createThreeRuntime } from "@/engine/three-runtime"
+import { deterministicMode } from "@/engine/debug/test-api"
 
 interface CreateExperienceOptions {
+  onSkyStatus?: RuntimeOptions["onSkyStatus"]
   canvas: HTMLCanvasElement
   touchRoot?: HTMLElement | null
   onState(state: ExperienceState): void
@@ -27,7 +29,11 @@ export function createExperience({
   touchRoot,
   onState,
   onQuality,
-  getWebGL2Context = (target) => target.getContext("webgl2"),
+  onSkyStatus,
+  // Context attributes are fixed by the first getContext call, before Three
+  // receives the context. Preserve only explicitly enabled manual captures.
+  getWebGL2Context = (target) =>
+    target.getContext("webgl2", { preserveDrawingBuffer: deterministicMode() }),
   createRuntime = createThreeRuntime,
 }: CreateExperienceOptions): Experience {
   let runtime: ExperienceRuntime | null = null
@@ -36,6 +42,7 @@ export function createExperience({
   let contextLost = false
   let generation = 0
   let quality: Quality | undefined
+  let landmarkUnavailable = false
   const publish = (state: ExperienceState) => {
     lifecycle = state.status
     onState(state)
@@ -84,14 +91,24 @@ export function createExperience({
       }
       publish({ status: "loading", progress: 0 })
       const epoch = generation
+      landmarkUnavailable = false
       const owned = createRuntime(canvas, context, {
+        generation: epoch,
+        onSkyStatus: (status) => {
+          if (disposed || epoch !== generation) return
+          landmarkUnavailable = !status.available
+          onSkyStatus?.({ ...status })
+        },
         touchRoot,
         quality,
-        onPauseRequested: pauseRuntime,
+        onPauseRequested: () => {
+          if (!disposed && epoch === generation) pauseRuntime()
+        },
         onFatal: () => {
           if (epoch === generation) fail()
         },
         onQuality: (next) => {
+          if (disposed || epoch !== generation) return
           quality = next
           onQuality?.(next)
         },
@@ -148,6 +165,16 @@ export function createExperience({
   }
   return {
     start,
+    skyCommand(command) {
+      if (disposed || !runtime || !["running", "paused"].includes(lifecycle))
+        return
+      if (command === "return-to-clearing" && lifecycle !== "paused") return
+      try {
+        runtime.skyCommand?.(command)
+      } catch {
+        fail()
+      }
+    },
     pause: pauseRuntime,
     resume() {
       if (lifecycle === "recovered") {
@@ -167,7 +194,12 @@ export function createExperience({
     retry() {
       // A lost context cannot be reconstructed. Keep listening for restoration,
       // even if Retry is pressed repeatedly while the browser is recovering.
-      if (!contextLost && lifecycle === "failed") construct()
+      if (
+        !contextLost &&
+        (lifecycle === "failed" ||
+          (lifecycle === "paused" && landmarkUnavailable))
+      )
+        construct()
     },
     setQuality(next) {
       if (disposed) return

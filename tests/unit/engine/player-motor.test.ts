@@ -1,5 +1,5 @@
 import * as THREE from "three"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import type { ControlIntent, TravelerState } from "@/engine/contracts"
 import {
@@ -135,4 +135,164 @@ describe("spherical player motor", () => {
     expect(crossedNorth).toBe(true)
     expect(crossedSouth).toBe(true)
   })
+})
+
+import {
+  createSkyspaceStructure,
+  sphereHeight,
+  rampHeight,
+} from "@/engine/world/skyspace-landmark"
+import { createSkyspaceCollider } from "@/engine/world/skyspace-collider"
+import { createSurfaceFrame } from "@/engine/world/surface-frame"
+it("walks and runs ten continuous ramp/chamber/return trips with real collision queries", () => {
+  const structure = createSkyspaceStructure(),
+    collider = createSkyspaceCollider(structure)
+  for (const run of [false, true])
+    for (let trip = 0; trip < 10; trip++) {
+      const position = structure.toWorld(
+        new THREE.Vector3(0, sphereHeight(0, 3.65), 3.65),
+      )
+      const inward = new THREE.Vector3(0, 0, -1).transformDirection(
+        structure.matrix,
+      )
+      const frame = createSurfaceFrame(config.planetCenter, position, inward)
+      let state: TravelerState = {
+        ...createInitialPlayerState(config),
+        position,
+        forward: frame.forward,
+        supportUp: frame.up,
+      }
+      for (
+        let i = 0;
+        i < 600 && structure.toLocal(state.position).z > 0.5;
+        i++
+      ) {
+        state = stepPlayerMotor(
+          state,
+          { ...idle, run, move: { x: 0, y: 1 } },
+          config,
+          1 / 60,
+          collider,
+        )
+        const overlap = collider.sweepCapsule(
+          state.position,
+          state.supportUp,
+          new THREE.Vector3(),
+          0.35,
+          1.3,
+        )
+        expect(overlap?.penetration ?? 0).toBeLessThanOrEqual(0.01001)
+      }
+      let local = structure.toLocal(state.position)
+      expect(local.z).toBeLessThanOrEqual(0.55)
+      expect(local.y).toBeCloseTo(0.12, 2)
+      expect(state.supportId).toBe("floor")
+      for (
+        let i = 0;
+        i < 600 && structure.toLocal(state.position).z < 3.65;
+        i++
+      )
+        state = stepPlayerMotor(
+          state,
+          { ...idle, run, move: { x: 0, y: -1 } },
+          config,
+          1 / 60,
+          collider,
+        )
+      local = structure.toLocal(state.position)
+      expect(local.z).toBeGreaterThanOrEqual(3.65)
+      expect(state.supportId).toBe("planet")
+    }
+})
+it("slides at corners and resolves ceiling velocity before landing architecturally upright", () => {
+  const structure = createSkyspaceStructure(),
+    collider = createSkyspaceCollider(structure)
+  let state: TravelerState = {
+    ...createInitialPlayerState(config),
+    position: structure.toWorld(new THREE.Vector3(0.8, 0.12, 0)),
+    forward: new THREE.Vector3(0, 0, -1).transformDirection(structure.matrix),
+    supportUp: new THREE.Vector3(0, 1, 0).transformDirection(structure.matrix),
+    supportId: "floor",
+  }
+  let peak = 0
+  for (let i = 0; i < 180; i++) {
+    state = stepPlayerMotor(
+      state,
+      { ...idle, jumpPressed: i === 0, move: { x: 0, y: 1 }, run: true },
+      config,
+      1 / 60,
+      collider,
+    )
+    const p = structure.toLocal(state.position)
+    peak = Math.max(peak, p.y)
+    expect(p.z).toBeGreaterThanOrEqual(-1.06)
+    expect(p.y).toBeLessThanOrEqual(0.94)
+  }
+  expect(peak).toBeGreaterThan(0.5)
+  expect(state.grounded).toBe(true)
+  expect(state.supportId).toBe("floor")
+})
+it("allows a ramp-side jump to fall back to radial ground and bounds airborne up changes", () => {
+  const structure = createSkyspaceStructure(),
+    collider = createSkyspaceCollider(structure)
+  const p = structure.toWorld(new THREE.Vector3(0.4, rampHeight(0.4, 2), 2)),
+    contact = collider.sampleSupport(p, "ramp")!
+  let state: TravelerState = {
+    ...createInitialPlayerState(config),
+    position: contact.point,
+    forward: new THREE.Vector3(1, 0, 0).transformDirection(structure.matrix),
+    supportUp: contact.normal,
+    supportId: "ramp",
+    previousGroundedSupport: "ramp",
+  }
+  let left = false
+  for (let i = 0; i < 240; i++) {
+    const previous = state.supportUp.clone()
+    state = stepPlayerMotor(
+      state,
+      {
+        ...idle,
+        jumpPressed: i === 0,
+        move: { x: 0, y: i < 80 ? 1 : 0 },
+        run: true,
+      },
+      config,
+      1 / 60,
+      collider,
+    )
+    left ||= !collider.containsFootprint(state.position)
+    if (!state.grounded)
+      expect(previous.angleTo(state.supportUp)).toBeLessThanOrEqual(
+        Math.PI / 60 + 1e-7,
+      )
+    expect(state.position.toArray().every(Number.isFinite)).toBe(true)
+  }
+  expect(left).toBe(true)
+  expect(state.supportId).toBe("planet")
+  expect(state.grounded).toBe(true)
+  expect(state.position.length()).toBeCloseTo(5.03, 5)
+})
+it("stops residual movement after four slide iterations and rejects an invalid timestep", () => {
+  const state = createInitialPlayerState(config)
+  const sweepCapsule = vi.fn(() => ({
+    time: 0,
+    normal: new THREE.Vector3(0, 1, 0),
+    id: "ceiling",
+  }))
+  const collider = {
+    sampleSupport: () => null,
+    sweepCapsule,
+    sweepCamera: () => null,
+    containsFootprint: () => true,
+  }
+  const result = stepPlayerMotor(
+    state,
+    { ...idle, move: { x: 0, y: 1 } },
+    config,
+    0.1,
+    collider,
+  )
+  expect(sweepCapsule.mock.calls.length).toBeLessThanOrEqual(4)
+  expect(result.position).toEqual(state.position)
+  expect(stepPlayerMotor(state, idle, config, NaN, collider)).toBe(state)
 })

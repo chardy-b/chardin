@@ -6,7 +6,9 @@ const harness = vi.hoisted(() => ({
   scene: null as THREE.Scene | null,
   camera: null as THREE.Camera | null,
   reduced: false,
-  motionChanged: () => {},
+  motionChanged: (() => {}) as (
+    event: Pick<MediaQueryListEvent, "matches">,
+  ) => void,
   frame: null as FrameRequestCallback | null,
   now: 0,
 }))
@@ -30,6 +32,7 @@ vi.mock("@/engine/render/render-pipeline", () => ({
     harness.camera = camera
     return {
       ready: Promise.resolve(),
+      applyLightFrame: vi.fn(),
       configure() {},
       resize() {},
       render() {
@@ -64,7 +67,10 @@ beforeEach(async () => {
     get matches() {
       return harness.reduced
     },
-    addEventListener: (_event: string, callback: () => void) => {
+    addEventListener: (
+      _event: string,
+      callback: typeof harness.motionChanged,
+    ) => {
       harness.motionChanged = callback
     },
     removeEventListener() {},
@@ -101,9 +107,9 @@ it("freezes ambient light and the loaded idle animation in the production loop o
       (object): object is THREE.DirectionalLight =>
         object instanceof THREE.DirectionalLight,
     )!
-    expect(sun.intensity).toBeGreaterThan(2.4)
+    expect(sun.intensity).toBe(2.4)
     harness.reduced = true
-    harness.motionChanged()
+    harness.motionChanged({ matches: true })
     step()
     const first = renderedState()
     for (let i = 0; i < 120; i++) {
@@ -111,7 +117,7 @@ it("freezes ambient light and the loaded idle animation in the production loop o
       expect(renderedState()).toEqual(first)
     }
     harness.reduced = false
-    harness.motionChanged()
+    harness.motionChanged({ matches: false })
     step()
     expect(renderedState()).not.toEqual(first)
   } finally {
@@ -149,7 +155,7 @@ it("keeps the real loaded idle traveler, camera and lights identical across 120 
     expect(canvas.dataset.travelerModel).toBe("loaded")
     runtime.start()
     harness.reduced = true
-    harness.motionChanged()
+    harness.motionChanged({ matches: true })
     const api = window.__CHARDIN_TEST__!
     api.step(1)
     const first = renderedState()

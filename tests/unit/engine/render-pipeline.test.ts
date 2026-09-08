@@ -114,3 +114,25 @@ it("bounds renderer size before allocating the composer and starts with Low effe
   expect(composer.passes[4]).toHaveProperty("renderToScreen", true)
   pipeline.dispose()
 })
+
+it("applies only the invariant score exposure through the existing pipeline", async () => {
+  const renderer = {
+    setPixelRatio: vi.fn(),
+    setSize: vi.fn(),
+    shadowMap: {},
+    getContext: () => ({ getExtension: () => ({}) }),
+  } as unknown as THREE.WebGLRenderer
+  const pipeline = createRenderPipeline(
+    renderer,
+    new THREE.Scene(),
+    new THREE.PerspectiveCamera(),
+    new THREE.DirectionalLight(),
+  )
+  await pipeline.ready
+  pipeline.applyLightFrame({ exposure: 1.05 })
+  expect(renderer.toneMappingExposure).toBe(1.05)
+  expect(() => pipeline.applyLightFrame({ exposure: NaN })).toThrow()
+  expect(renderer.toneMapping).toBe(THREE.NoToneMapping)
+  pipeline.dispose()
+  pipeline.applyLightFrame({ exposure: NaN })
+})

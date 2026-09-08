@@ -1,4 +1,5 @@
 import type * as THREE from "three"
+import type { SkyCommand, SkyStatus } from "@/engine/world/sky-controller"
 import type { Quality } from "@/engine/quality/quality-controller"
 
 export type ExperienceState =
@@ -13,6 +14,10 @@ export type ExperienceState =
   | { status: "disposed" }
 
 export interface TravelerState {
+  velocity: THREE.Vector3
+  supportUp: THREE.Vector3
+  supportId: "planet" | "ramp" | "floor" | "air"
+  previousGroundedSupport: "planet" | "ramp" | "floor"
   position: THREE.Vector3
   forward: THREE.Vector3
   radialVelocity: number
@@ -36,6 +41,8 @@ export interface SurfaceFrame {
 }
 
 export interface RuntimeOptions {
+  generation?: number
+  onSkyStatus?: (status: SkyStatus) => void
   touchRoot?: HTMLElement | null
   onPauseRequested?: () => void
   onFatal?: () => void
@@ -44,6 +51,7 @@ export interface RuntimeOptions {
 }
 
 export interface ExperienceRuntime {
+  skyCommand?(command: SkyCommand): void
   ready?: Promise<void>
   setQuality?(quality: Quality): void
   start(): void
@@ -53,6 +61,7 @@ export interface ExperienceRuntime {
 }
 
 export interface Experience {
+  skyCommand(command: SkyCommand): void
   retry(): void
   setQuality(quality: Quality): void
   start(): boolean

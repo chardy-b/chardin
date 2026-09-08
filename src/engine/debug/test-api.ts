@@ -2,6 +2,18 @@ import type { ControlIntent } from "@/engine/contracts"
 import type { Quality } from "@/engine/quality/quality-controller"
 
 export interface TestSnapshot {
+  generation: number
+  forward: number[]
+  supportId: string
+  supportUp: number[]
+  localFeet: number[]
+  cameraPosition: number[]
+  cameraTarget: number[]
+  cameraMode: string
+  travelerVisible: boolean
+  landmarkAvailable: boolean
+  sky: { tick: number; phase: string; playback: string }
+  route: number[][]
   position: number[]
   cameraUp: number[]
   grounded: boolean
@@ -17,6 +29,7 @@ export interface TestSnapshot {
   viewport: { width: number; height: number }
 }
 export interface ChardinTestApi {
+  setSkyTick(tick: number): void
   snapshot(): TestSnapshot
   step(frames: number, intent?: Partial<ControlIntent>): void
   /** Sample the real input adapters during fixed steps in manual test mode. */
