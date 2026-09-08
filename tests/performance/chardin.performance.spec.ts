@@ -4,7 +4,11 @@ import { expect, test } from "@playwright/test"
 import { installWebGLProbe } from "./webgl-probe"
 import { summarize } from "../../scripts/lib/measurement.mjs"
 import { loadPerformanceBudgets } from "../../scripts/lib/performance-budgets.mjs"
-import type {} from "../../src/engine/debug/test-api"
+import { measureWorkload } from "./measure-workload"
+import {
+  PERFORMANCE_WORKLOAD,
+  PERFORMANCE_TIMEOUTS,
+} from "../../scripts/lib/performance-workload.mjs"
 
 const budgets = loadPerformanceBudgets()
 
@@ -44,100 +48,19 @@ test("bounded fixed-workload release measurement", async ({
     "data-traveler-model",
     "loaded",
   )
-  const measured = await page.evaluate(
-    async ({ profile }) => {
-      const api = window.__CHARDIN_TEST__!
-      const probe = window.__CHARDIN_PROBE__
-      const gl = document.querySelector("canvas")!.getContext("webgl2")!
-      const debug = gl.getExtension("WEBGL_debug_renderer_info")
-      const environment = {
-        userAgent: navigator.userAgent,
-        renderer: debug
-          ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)
-          : gl.getParameter(gl.RENDERER),
-        vendor: debug
-          ? gl.getParameter(debug.UNMASKED_VENDOR_WEBGL)
-          : gl.getParameter(gl.VENDOR),
-        dpr: devicePixelRatio,
-        drawingBuffer: {
-          width: gl.drawingBufferWidth,
-          height: gl.drawingBufferHeight,
-        },
-        viewport: { width: innerWidth, height: innerHeight },
-        initialState: api.snapshot(),
-      }
-      const raw: Array<{
-        cadenceMs: number
-        completedFrameMs: number
-        drawCalls: number
-        triangles: number
-        textureBytes: number
-      }> = []
-      const start = performance.now()
-      await new Promise<void>((resolve, reject) => {
-        let frame = 0
-        let previous = 0
-        let raf = 0
-        const deadline = setTimeout(() => {
-          cancelAnimationFrame(raf)
-          reject(new Error("Measurement exceeded 120 seconds"))
-        }, 120_000)
-        const tick = (time: number) => {
-          try {
-            if (document.hidden || gl.isContextLost())
-              throw new Error("Measurement interrupted")
-            const state = api.snapshot()
-            if (!state.running || state.quality !== profile)
-              throw new Error("Workload state changed")
-            probe.resetFrame()
-            const before = performance.now()
-            // Same deterministic pole-crossing route in each fresh browser context.
-            api.step(1, { move: { x: 0, y: 1 }, run: true })
-            gl.finish()
-            const completedFrameMs = performance.now() - before
-            const counters = probe.snapshot()
-            if (frame >= 60)
-              raw.push({
-                cadenceMs: time - previous,
-                completedFrameMs,
-                drawCalls: counters.drawCalls,
-                triangles: counters.triangles,
-                textureBytes: counters.textureBytes,
-              })
-            previous = time
-            frame++
-            if (frame === 360) {
-              clearTimeout(deadline)
-              resolve()
-            } else raf = requestAnimationFrame(tick)
-          } catch (error) {
-            clearTimeout(deadline)
-            reject(error)
-          }
-        }
-        raf = requestAnimationFrame(tick)
-      })
-      return {
-        environment,
-        raw,
-        durationMs: performance.now() - start,
-        allocations: probe.snapshot(),
-        finalState: api.snapshot(),
-        resources: performance.getEntriesByType("resource").map((entry) => {
-          const resource = entry as PerformanceResourceTiming
-          return {
-            name: new URL(resource.name).pathname,
-            encodedBytes: resource.encodedBodySize,
-            decodedBytes: resource.decodedBodySize,
-            transferBytes: resource.transferSize,
-          }
-        }),
-      }
-    },
-    { profile },
-  )
-  const report = {
-    schema: 1,
+  const workload = {
+    ...PERFORMANCE_WORKLOAD,
+    timeoutMs:
+      PERFORMANCE_TIMEOUTS.samplingMs[
+        info.project.name as keyof typeof PERFORMANCE_TIMEOUTS.samplingMs
+      ],
+  }
+  const measured = await page.evaluate(measureWorkload, {
+    profile,
+    ...workload,
+  } as const)
+  const metadata = {
+    schema: 2,
     head: execFileSync("git", ["rev-parse", "HEAD"], {
       encoding: "utf8",
     }).trim(),
@@ -146,8 +69,10 @@ test("bounded fixed-workload release measurement", async ({
         encoding: "utf8",
       }).trim() !== "",
     recordedAt: new Date().toISOString(),
+    scenario: info.project.name,
+    workload,
     classification:
-      "Linux/SwiftShader browser measurement; mobile is emulation, never physical-device proof",
+      "Chromium/SwiftShader software-renderer measurement; mobile is emulation, never hardware or physical-device proof",
     host: {
       platform: platform(),
       release: release(),
@@ -156,11 +81,22 @@ test("bounded fixed-workload release measurement", async ({
       memoryBytes: totalmem(),
       browser: browser.version(),
     },
-    scenario: info.project.name,
     startupProfile,
+    ...measured,
+    errors,
+  }
+  if (measured.failure) {
+    // Partial samples are diagnostic only: never summarize an incomplete route.
+    await info.attach("performance-incomplete.json", {
+      body: JSON.stringify({ ...metadata, status: "incomplete" }, null, 2),
+      contentType: "application/json",
+    })
+    throw new Error(measured.failure)
+  }
+  const report = {
+    ...metadata,
     method:
       "60 warmup + 300 measured RAF frames; one fixed 1/60 run step + gl.finish per frame; no trimming or retries; completedFrameMs includes CPU submission and GPU wait, not presentation latency",
-    ...measured,
     summary: {
       cadenceMs: summarize(
         measured.raw.map((frame) => frame.cadenceMs),
@@ -204,13 +140,12 @@ test("bounded fixed-workload release measurement", async ({
         (frame) => frame.cadenceMs > budget.frameMs * 1.5,
       ).length,
     },
-    errors,
   }
   await info.attach("performance.json", {
     body: JSON.stringify(report, null, 2),
     contentType: "application/json",
   })
-  expect(measured.raw).toHaveLength(300)
+  expect(measured.raw).toHaveLength(PERFORMANCE_WORKLOAD.sampleFrames)
   expect(measured.allocations.unknownAllocations).toBe(0)
   expect(
     measured.raw.every(

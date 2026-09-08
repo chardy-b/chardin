@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test"
+import { PERFORMANCE_TIMEOUTS } from "./scripts/lib/performance-workload.mjs"
 
 // Separate from visual tests: no screenshot tracing or retry-selected timings.
 export default defineConfig({
@@ -7,7 +8,7 @@ export default defineConfig({
   outputDir: "test-results/performance",
   workers: 1,
   retries: 0,
-  timeout: 150_000,
+  globalTimeout: PERFORMANCE_TIMEOUTS.globalMs,
   reporter: [
     ["list"],
     ["json", { outputFile: "test-results/performance-tests.json" }],
@@ -28,18 +29,27 @@ export default defineConfig({
   projects: [
     {
       name: "desktop-high",
+      timeout:
+        PERFORMANCE_TIMEOUTS.samplingMs["desktop-high"] +
+        PERFORMANCE_TIMEOUTS.testOverheadMs,
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1280, height: 720 },
       },
     },
-    { name: "mobile-emulation-low", use: { ...devices["Pixel 5"] } },
+    {
+      name: "mobile-emulation-low",
+      timeout:
+        PERFORMANCE_TIMEOUTS.samplingMs["mobile-emulation-low"] +
+        PERFORMANCE_TIMEOUTS.testOverheadMs,
+      use: { ...devices["Pixel 5"] },
+    },
   ],
   webServer: {
     command:
       "NEXT_PUBLIC_E2E_HOOKS=true pnpm build && pnpm start --hostname 127.0.0.1",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: false,
-    timeout: 180_000,
+    timeout: PERFORMANCE_TIMEOUTS.webServerMs,
   },
 })

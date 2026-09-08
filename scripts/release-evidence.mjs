@@ -2,6 +2,7 @@ import { spawn } from "node:child_process"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { identity, requireExactHead, sha256 } from "./lib/evidence.mjs"
+import { PERFORMANCE_TIMEOUTS } from "./lib/performance-workload.mjs"
 
 const commands = {
   format: ["pnpm", "format:check"],
@@ -91,7 +92,7 @@ const timer = setTimeout(
     stop("SIGTERM")
     forceTimer = setTimeout(() => stop("SIGKILL"), 5000)
   },
-  20 * 60 * 1000,
+  gate === "performance" ? PERFORMANCE_TIMEOUTS.runnerMs : 20 * 60 * 1000,
 )
 for (const stream of [child.stdout, child.stderr])
   stream.on("data", recordOutput)
