@@ -99,6 +99,35 @@ describe("InputManager", () => {
       pausePressed: false,
     })
   })
+
+  it("discards input buffered while paused at the resume boundary", () => {
+    let state: PartialControlIntent = { action: true, pause: true }
+    const source: InputAdapter = {
+      sample: () => state,
+      clear: vi.fn(() => {
+        state = {}
+      }),
+      dispose: vi.fn(),
+    }
+    const manager = new InputManager([source])
+
+    expect(manager.sample()).toMatchObject({
+      actionPressed: true,
+      pausePressed: true,
+    })
+    manager.pause()
+    state = { jump: true, action: true, pause: true }
+
+    manager.resume()
+
+    expect(manager.sample()).toMatchObject({
+      jumpPressed: false,
+      actionPressed: false,
+      pausePressed: false,
+    })
+    expect(source.clear).toHaveBeenCalledTimes(2)
+    manager.dispose()
+  })
 })
 
 describe("KeyboardInput", () => {
@@ -156,6 +185,30 @@ describe("KeyboardInput", () => {
     button.remove()
     input.remove()
   })
+
+  it.each(["Escape", "Space", "KeyE"])(
+    "does not recreate a %s edge from auto-repeat after clear",
+    (code) => {
+      const keyboard = new KeyboardInput(window)
+      window.dispatchEvent(new KeyboardEvent("keydown", { code }))
+
+      keyboard.clear()
+      window.dispatchEvent(new KeyboardEvent("keydown", { code, repeat: true }))
+
+      expect(keyboard.sample()).toEqual({})
+
+      window.dispatchEvent(new KeyboardEvent("keyup", { code }))
+      window.dispatchEvent(new KeyboardEvent("keydown", { code }))
+      window.dispatchEvent(new KeyboardEvent("keyup", { code }))
+      expect(keyboard.sample()).toMatchObject({
+        jump: code === "Space",
+        action: code === "KeyE",
+        pause: code === "Escape",
+      })
+      expect(keyboard.sample()).toEqual({})
+      keyboard.dispose()
+    },
+  )
 })
 
 describe("GamepadInput", () => {
@@ -209,5 +262,21 @@ describe("GamepadInput", () => {
     expect(input.sample()).toEqual({})
     input.clear()
     expect(input.sample()).toEqual({})
+  })
+
+  it("keeps clear suppression when the first gamepad connects", () => {
+    const input = new GamepadInput(() => pads)
+    input.clear()
+
+    const pad = gamepad()
+    pad.buttons[0] = { pressed: true, touched: true, value: 1 }
+    pads = [pad]
+    expect(input.sample()).toEqual({})
+
+    pad.buttons[0] = { pressed: false, touched: false, value: 0 }
+    expect(input.sample()).toMatchObject({ jump: false })
+
+    pad.buttons[0] = { pressed: true, touched: true, value: 1 }
+    expect(input.sample()).toMatchObject({ jump: true })
   })
 })

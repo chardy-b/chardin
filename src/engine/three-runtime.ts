@@ -95,6 +95,8 @@ export function createThreeRuntime(
     motorConfig.planetCenter,
   )
   let disposed = false
+  let started = false
+  let running = false
   let frameIntent: ControlIntent = {
     move: { x: 0, y: 0 },
     look: { x: 0, y: 0 },
@@ -107,6 +109,13 @@ export function createThreeRuntime(
     jumpPressed: false,
     actionPressed: false,
     pausePressed: false,
+  }
+  const clearPendingEdges = () => {
+    pendingEdges = {
+      jumpPressed: false,
+      actionPressed: false,
+      pausePressed: false,
+    }
   }
 
   const resize = () => {
@@ -155,12 +164,10 @@ export function createThreeRuntime(
     simulate(dt) {
       const intent: ControlIntent = { ...frameIntent, ...pendingEdges }
       if (intent.pausePressed) {
-        pendingEdges = {
-          jumpPressed: false,
-          actionPressed: false,
-          pausePressed: false,
-        }
+        clearPendingEdges()
         input.pause()
+        running = false
+        loop.pause()
         options.onPauseRequested?.()
         return
       }
@@ -169,15 +176,12 @@ export function createThreeRuntime(
       travelerDistance += previousPosition.distanceTo(travelerState.position)
       travelerView.update(travelerState, dt)
       cameraState = applyCameraLook(cameraState, intent.look, dt)
-      pendingEdges = {
-        jumpPressed: false,
-        actionPressed: false,
-        pausePressed: false,
-      }
+      clearPendingEdges()
     },
     render() {
       placeTravelerAndCamera()
       canvas.dataset.travelerDistance = travelerDistance.toFixed(4)
+      canvas.dataset.travelerGrounded = String(travelerState.grounded)
       renderer.render(scene, camera)
     },
     now: () => performance.now(),
@@ -188,12 +192,26 @@ export function createThreeRuntime(
   renderer.render(scene, camera)
 
   return {
-    start: () => loop.start(),
+    start: () => {
+      if (disposed || started) return
+      started = true
+      running = true
+      loop.start()
+    },
     pause: () => {
+      if (disposed || !running) return
+      running = false
+      clearPendingEdges()
       input.pause()
       loop.pause()
     },
-    resume: () => loop.resume(),
+    resume: () => {
+      if (disposed || !started || running) return
+      clearPendingEdges()
+      input.resume()
+      running = true
+      loop.resume()
+    },
     dispose() {
       if (disposed) return
       disposed = true

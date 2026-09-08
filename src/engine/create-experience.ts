@@ -60,7 +60,7 @@ export function createExperience({
 
   const experience: Experience = {
     start() {
-      if (!runtime || disposed) return false
+      if (!runtime || lifecycle !== "ready" || disposed) return false
       runtime.start()
       publish({ status: "running" })
       return true

@@ -32,7 +32,7 @@ export class GamepadInput implements InputAdapter {
     }
     if (pad.index !== this.activeIndex) {
       this.activeIndex = pad.index
-      this.suppressUntilNeutral = this.hasSeenPad
+      this.suppressUntilNeutral ||= this.hasSeenPad
       this.hasSeenPad = true
     }
     const move = radialDeadZone(

@@ -54,6 +54,10 @@ export class InputManager {
     this.clear()
   }
 
+  resume() {
+    this.clear()
+  }
+
   sample(): ControlIntent {
     if (this.disposed)
       return { ...EMPTY_INTENT, move: { x: 0, y: 0 }, look: { x: 0, y: 0 } }
