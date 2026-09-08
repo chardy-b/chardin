@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import { captureManualFrame } from "./helpers/manual-frame"
 
 function intersects(
   first: { x: number; y: number; width: number; height: number },
@@ -20,7 +21,7 @@ test.describe("Chardin world", () => {
     test.skip(testInfo.project.name !== "chromium")
     const errors: string[] = []
     page.on("pageerror", (error) => errors.push(error.message))
-    await page.goto("/")
+    await page.goto("/?e2e=1")
     await expect(
       page.getByRole("heading", { name: /follow the curve/i }),
     ).toBeVisible()
@@ -28,29 +29,41 @@ test.describe("Chardin world", () => {
     await expect(page.locator(".status-line")).toContainText("running")
     const canvas = page.locator("canvas")
     await expect(canvas).toHaveAttribute("data-traveler-model", "loaded")
-    const beforeMovement = await canvas.screenshot()
+    const spawn = await page.evaluate(() => window.__CHARDIN_TEST__!.snapshot())
+    const beforeMovement = await captureManualFrame(page)
     await page.keyboard.down("ShiftLeft")
     await page.keyboard.down("KeyW")
-    await page.waitForTimeout(800)
+    await page.evaluate(() => window.__CHARDIN_TEST__!.stepInput(60))
     await page.keyboard.up("KeyW")
     await page.keyboard.up("ShiftLeft")
-    const afterMovement = await canvas.screenshot()
+    const moved = await page.evaluate(() => window.__CHARDIN_TEST__!.snapshot())
+    expect(moved.simulationTime - spawn.simulationTime).toBeCloseTo(1, 10)
+    expect(moved.distance - spawn.distance).toBeCloseTo(3.3, 4)
+    expect(moved.position).not.toEqual(spawn.position)
+    const afterMovement = await captureManualFrame(page)
     expect(afterMovement.equals(beforeMovement)).toBe(false)
     expect(
       Number(await canvas.getAttribute("data-traveler-distance")),
     ).toBeGreaterThan(0.5)
 
     await page.keyboard.down("Escape")
+    await page.evaluate(() => window.__CHARDIN_TEST__!.stepInput(1))
     await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible()
-    const paused = await canvas.screenshot()
+    const paused = await captureManualFrame(page)
+    const pausedState = await page.evaluate(() =>
+      window.__CHARDIN_TEST__!.snapshot(),
+    )
     const distanceAtPause = await canvas.getAttribute("data-traveler-distance")
     await expect(canvas).toHaveAttribute("data-traveler-grounded", "true")
     await page.keyboard.down("Space")
     await page.keyboard.down("KeyE")
     await page.keyboard.down("KeyW")
-    await page.waitForTimeout(500)
+    await page.evaluate(() => window.__CHARDIN_TEST__!.stepInput(30))
     await page.keyboard.up("KeyW")
-    expect((await canvas.screenshot()).equals(paused)).toBe(true)
+    expect(
+      await page.evaluate(() => window.__CHARDIN_TEST__!.snapshot()),
+    ).toEqual(pausedState)
+    expect((await captureManualFrame(page)).equals(paused)).toBe(true)
     if (process.env.CHARDIN_EVIDENCE_DIR) {
       await page.screenshot({
         path: `${process.env.CHARDIN_EVIDENCE_DIR}/desktop-paused.png`,
@@ -66,12 +79,22 @@ test.describe("Chardin world", () => {
       }
     })
     await expect(page.locator(".status-line")).toContainText("running")
-    await page.waitForTimeout(150)
+    await page.evaluate(() => window.__CHARDIN_TEST__!.stepInput(9))
     await expect(page.locator(".status-line")).toContainText("running")
     await expect(canvas).toHaveAttribute("data-traveler-grounded", "true")
     await expect(canvas).toHaveAttribute(
       "data-traveler-distance",
       distanceAtPause!,
+    )
+    const resumed = await page.evaluate(() =>
+      window.__CHARDIN_TEST__!.snapshot(),
+    )
+    expect(resumed.simulationTime - pausedState.simulationTime).toBeCloseTo(
+      9 / 60,
+      10,
+    )
+    resumed.position.forEach((value, index) =>
+      expect(value).toBeCloseTo(pausedState.position[index], 10),
     )
     await page.keyboard.up("Escape")
     await page.keyboard.up("Space")
@@ -81,10 +104,17 @@ test.describe("Chardin world", () => {
     await page.keyboard.press("Space")
     await expect(page.getByLabel("Movement guide")).toBeVisible()
     await page.getByRole("button", { name: "Close guide" }).click()
+    await canvas.focus()
+    const beforeWalk = await captureManualFrame(page)
     await page.keyboard.down("KeyW")
-    await page.waitForTimeout(300)
+    await page.evaluate(() => window.__CHARDIN_TEST__!.stepInput(30))
     await page.keyboard.up("KeyW")
-    expect((await canvas.screenshot()).equals(paused)).toBe(false)
+    const walked = await page.evaluate(() =>
+      window.__CHARDIN_TEST__!.snapshot(),
+    )
+    expect(walked.distance - resumed.distance).toBeCloseTo(0.825, 4)
+    expect(walked.position).not.toEqual(resumed.position)
+    expect((await captureManualFrame(page)).equals(beforeWalk)).toBe(false)
     await expect(canvas).toBeVisible()
     expect(errors).toEqual([])
     if (process.env.CHARDIN_EVIDENCE_DIR) {

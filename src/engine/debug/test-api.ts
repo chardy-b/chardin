@@ -19,6 +19,8 @@ export interface TestSnapshot {
 export interface ChardinTestApi {
   snapshot(): TestSnapshot
   step(frames: number, intent?: Partial<ControlIntent>): void
+  /** Sample the real input adapters during fixed steps in manual test mode. */
+  stepInput(frames: number): void
   outlineSignals(depth: boolean, normal: boolean): void
 }
 declare global {

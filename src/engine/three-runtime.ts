@@ -336,6 +336,33 @@ export function createThreeRuntime(
       applyQuality(selected)
       draw()
     })
+    const stepForTest = (
+      frames: number,
+      sample: (frame: number) => ControlIntent,
+    ) => {
+      if (
+        !manual ||
+        !running ||
+        disposed ||
+        !Number.isInteger(frames) ||
+        frames < 0 ||
+        frames > 3600
+      )
+        return
+      guarded(() => {
+        for (let i = 0; i < frames && running; i++) {
+          frameIntent = sample(i)
+          pendingEdges = {
+            jumpPressed: frameIntent.jumpPressed,
+            actionPressed: frameIntent.actionPressed,
+            pausePressed: frameIntent.pausePressed,
+          }
+          simulate(1 / 60)
+        }
+        // One render after the batch: test progress never depends on RAF speed.
+        draw()
+      })
+    }
     scope.defer(
       installTestApi({
         snapshot: () => ({
@@ -354,27 +381,16 @@ export function createThreeRuntime(
           viewport: { ...renderedViewport },
         }),
         step(frames, intent = {}) {
-          if (
-            !manual ||
-            !running ||
-            disposed ||
-            !Number.isInteger(frames) ||
-            frames < 0 ||
-            frames > 3600
-          )
-            return
-          guarded(() => {
-            for (let i = 0; i < frames && running; i++) {
-              frameIntent = { ...emptyIntent(), ...intent }
-              pendingEdges = {
-                jumpPressed: i === 0 && !!intent.jumpPressed,
-                actionPressed: i === 0 && !!intent.actionPressed,
-                pausePressed: i === 0 && !!intent.pausePressed,
-              }
-              simulate(1 / 60)
-            }
-            draw()
-          })
+          stepForTest(frames, (i) => ({
+            ...emptyIntent(),
+            ...intent,
+            jumpPressed: i === 0 && !!intent.jumpPressed,
+            actionPressed: i === 0 && !!intent.actionPressed,
+            pausePressed: i === 0 && !!intent.pausePressed,
+          }))
+        },
+        stepInput(frames) {
+          stepForTest(frames, () => input.sample())
         },
         outlineSignals(depth, normal) {
           if (manual)
