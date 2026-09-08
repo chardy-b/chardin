@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import type { TravelerState } from "@/engine/contracts"
 import {
+  type ThirdPersonCameraState,
   CAMERA_PITCH_LIMIT,
   CAMERA_YAW_LIMIT,
   applyCameraLook,
@@ -289,4 +290,44 @@ it("uses distinct .40 entry and .50 exit distances without flickering or leaking
   })
   expect(camera.mode).toBe("walking")
   expect(camera.hideTraveler).toBe(false)
+})
+
+it("releases visibility by capsule clearance while a safe moving transition remains active", async () => {
+  const { cameraIntersectsTraveler, easeCameraTransition } =
+    await import("@/engine/camera/third-person-camera")
+  const feet = new THREE.Vector3(),
+    up = new THREE.Vector3(0, 1, 0)
+  const at = (x: number) => new THREE.Vector3(x, 0.85, 0)
+  expect(cameraIntersectsTraveler(at(0.48), feet, up)).toBe(true)
+  expect(cameraIntersectsTraveler(at(0.54), feet, up)).toBe(false)
+  expect(cameraIntersectsTraveler(at(0.54), feet, up, true)).toBe(true)
+  expect(cameraIntersectsTraveler(at(0.6), feet, up, true)).toBe(false)
+  let state: ThirdPersonCameraState = {
+    ...createThirdPersonCameraState(traveler(0), feet),
+    position: new THREE.Vector3(0, 1.25, 0),
+    target: new THREE.Vector3(0, 1.25, -1),
+    mode: "eye" as "eye" | "walking",
+    hideTraveler: true,
+  }
+  const collider = { sweepCamera: vi.fn(() => null) }
+  let visible = false
+  for (let frame = 0; frame < 60; frame++) {
+    feet.z += 1.65 / 60
+    const desired = {
+      ...state,
+      mode: "walking" as const,
+      hideTraveler: false,
+      position: feet.clone().add(new THREE.Vector3(0, 2.25, 4.4)),
+      target: feet.clone().add(new THREE.Vector3(0, 0.65, 0)),
+    }
+    const next = easeCameraTransition(state, desired, 1 / 60, collider)
+    expect(next.position.distanceTo(state.position)).toBeLessThan(0.7)
+    visible =
+      !next.hideTraveler &&
+      !cameraIntersectsTraveler(next.position, feet, up, !visible)
+    state = { ...next, mode: "walking", hideTraveler: !!next.hideTraveler }
+  }
+  expect(state.transitioning).toBe(true)
+  expect(visible).toBe(true)
+  expect(collider.sweepCamera).toHaveBeenCalled()
 })

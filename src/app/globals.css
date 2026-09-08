@@ -9,7 +9,9 @@
   --hud-inset: clamp(0.75rem, 2.5vw, 2rem);
   --hud-type: 0.75rem;
   --control-radius: 0.35rem;
-  --control-surface: rgba(245, 240, 222, 0.94);
+  --control-surface: #f5f0de;
+  --control-hover: #e8e4d3;
+  --control-muted: #52635a;
 }
 * {
   box-sizing: border-box;
@@ -347,8 +349,8 @@ select:focus-visible {
   overflow: auto;
   background: var(--paper);
   color: var(--ink);
-  border: 1px solid var(--control-border);
-  border-radius: 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
   padding: 0 0.75rem;
   font-size: var(--hud-type);
   z-index: 2;
@@ -525,12 +527,12 @@ summary:focus-visible {
 }
 
 .pavilion-availability {
-  position: absolute;
-  left: 1rem;
-  bottom: calc(12rem + env(safe-area-inset-bottom));
-  width: min(20rem, calc(100% - 2rem));
+  /* Share the lifecycle panel's normal flow and scroll area with its actions. */
+  position: static;
+  max-width: 100%;
+  margin-block: 1rem;
   padding: 0.75rem;
-  z-index: 2;
+  overflow-wrap: anywhere;
   background: var(--paper);
   color: var(--ink);
   border: 1px solid var(--control-border);
@@ -550,5 +552,107 @@ summary:focus-visible {
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+}
+
+/* One quiet control language across native select, disclosure and navigation. */
+.quality-control select {
+  appearance: none;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0 var(--control-radius) var(--control-radius) 0;
+  width: 5.8rem;
+  padding: 0.5rem 1.35rem 0.5rem 0.6rem;
+  background: transparent;
+  cursor: pointer;
+}
+.quality-control::after,
+.sky-panel summary::after {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+.quality-control::after {
+  position: absolute;
+  right: 0.6rem;
+  top: 1.05rem;
+}
+.sky-panel summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  list-style: none;
+}
+.sky-panel summary::-webkit-details-marker {
+  display: none;
+}
+.sky-panel[open] summary::after {
+  transform: rotate(225deg);
+}
+.experience-actions button:hover,
+.quality-control select:hover,
+.sky-panel summary:hover {
+  background: var(--control-hover);
+}
+.experience-actions button[aria-expanded="true"] {
+  background: var(--control-hover);
+}
+.sky-panel p {
+  color: var(--control-muted);
+  line-height: 1.55;
+}
+.help-panel > button {
+  min-width: 44px;
+  min-height: 44px;
+  margin-top: 0.8rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+.lifecycle {
+  inset: 9rem 0 1rem;
+}
+.lifecycle[hidden] {
+  display: none;
+}
+.lifecycle > section {
+  max-height: 100%;
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  .lifecycle {
+    inset: 10.75rem 0 max(1rem, env(safe-area-inset-bottom));
+  }
+  .quality-control {
+    gap: 0.35rem;
+    padding-left: 0.5rem;
+  }
+}
+@media (max-height: 500px) {
+  .lifecycle {
+    inset: 7.25rem 0 0.5rem;
+  }
+  .lifecycle > section {
+    padding: 1rem 1.25rem;
+  }
+  .welcome-panel h1,
+  .failure-panel h1,
+  .pause-panel h2 {
+    font-size: 2rem;
+  }
+  .touch-stick {
+    width: 60px;
+    height: 60px;
+  }
+  .touch-cluster-right {
+    max-width: 15rem;
   }
 }

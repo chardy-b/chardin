@@ -164,7 +164,9 @@ export function createTravelerView(
     failedLoad(error)
   }
 
+  let outgoingAction: THREE.AnimationAction | null = null
   let frozen = false
+  let stationarySeconds = 0
   const transition = (next: CharacterAnimation, instant: boolean) => {
     if (!asset || !mixer) return
     const resolved = asset.clips[next] ? next : "idle"
@@ -190,6 +192,7 @@ export function createTravelerView(
     action.play()
     if (!instant && activeAction && activeAction !== action)
       activeAction.crossFadeTo(action, 0.12, false)
+    outgoingAction = instant ? null : activeAction
     activeAction = action
     active = resolved
   }
@@ -205,8 +208,18 @@ export function createTravelerView(
         previous.q.copy(current.q)
       }
       const instant = fixedSeconds === 0
+      const locomoting =
+        state.locomotion === "walk" || state.locomotion === "run"
+      stationarySeconds =
+        locomoting && signedSpeed !== undefined && Math.abs(signedSpeed) < 0.02
+          ? stationarySeconds + fixedSeconds
+          : 0
       transition(
-        state.locomotion === "airborne" ? "jump" : state.locomotion,
+        state.locomotion === "airborne"
+          ? "jump"
+          : stationarySeconds >= 0.08
+            ? "idle"
+            : state.locomotion,
         instant,
       )
       frozen = instant
@@ -219,6 +232,20 @@ export function createTravelerView(
               ? THREE.MathUtils.clamp(signedSpeed / reference, -2, 2)
               : 0,
         )
+      }
+      if (
+        outgoingAction &&
+        activeAction &&
+        (active === "walk" || active === "run")
+      ) {
+        // A fading locomotion clip follows the incoming normalized clock too;
+        // otherwise the two stance feet drift apart during a walk/run blend.
+        if (["Walk", "Run"].includes(outgoingAction.getClip().name))
+          outgoingAction.setEffectiveTimeScale(
+            (activeAction.getEffectiveTimeScale() *
+              outgoingAction.getClip().duration) /
+              activeAction.getClip().duration,
+          )
       }
       mixer?.update(fixedSeconds)
       for (const { node, current, previous } of poses) {

@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import { expect, it } from "vitest"
 import visualProvenance from "../../../docs/design/wil145-provenance.json"
+import loop3Provenance from "../../../docs/design/wil146-provenance.json"
 import pavilionProvenance from "../../../docs/design/wil125-provenance.json"
 import inventory from "../../../docs/asset-inventory.json"
 
@@ -30,6 +31,7 @@ it("requires every distributed asset and visual baseline to have a matching prov
       "src/engine/player/traveler-view.ts",
       "src/engine/player/presentation.ts",
       "src/engine/player/contact-shadow.ts",
+      "src/engine/player/foot-placement.ts",
       "src/engine/camera/third-person-camera.ts",
       "src/engine/three-runtime.ts",
       "src/engine/debug/test-api.ts",
@@ -50,7 +52,11 @@ it("requires every distributed asset and visual baseline to have a matching prov
 })
 
 it("matches both detailed provenance records to current source bytes without clearing legacy rights", () => {
-  for (const provenance of [visualProvenance, pavilionProvenance]) {
+  for (const provenance of [
+    visualProvenance,
+    pavilionProvenance,
+    loop3Provenance,
+  ]) {
     expect(provenance.externalInputs).toEqual([])
     expect(provenance.review.reviewer).toBeNull()
     expect(provenance.rightsStatus).toContain("pending")

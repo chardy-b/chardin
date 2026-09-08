@@ -98,9 +98,28 @@ export function ChardinExperience() {
     canvasRef.current?.focus()
   }
   const failure = state.status === "failed" ? state.code : null
+  const availability = !sky.available && (
+    <p className="pavilion-availability" role="status">
+      The pavilion is unavailable. You can still explore the planet.
+    </p>
+  )
 
   return (
-    <main className="experience-shell">
+    <main
+      className="experience-shell"
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || (!helpOpen && !aboutOpen)) return
+        event.preventDefault()
+        event.stopPropagation()
+        if (helpOpen) {
+          setHelpOpen(false)
+          helpRef.current?.focus()
+        } else {
+          setAboutOpen(false)
+          aboutRef.current?.focus()
+        }
+      }}
+    >
       <canvas
         ref={canvasRef}
         className="world-canvas"
@@ -146,6 +165,7 @@ export function ChardinExperience() {
             helpRef.current?.focus()
           }}
           aria-expanded={helpOpen}
+          aria-controls="movement-guide"
         >
           {helpOpen ? "Close guide" : "How to move"}
         </button>
@@ -153,6 +173,7 @@ export function ChardinExperience() {
           ref={aboutRef}
           type="button"
           aria-expanded={aboutOpen}
+          aria-controls="pavilion-description"
           onClick={() => {
             experienceRef.current?.pause()
             setHelpOpen(false)
@@ -163,7 +184,11 @@ export function ChardinExperience() {
           About the pavilion
         </button>
       </nav>
-      <aside className="description-panel" hidden={!aboutOpen}>
+      <aside
+        id="pavilion-description"
+        className="description-panel"
+        hidden={!aboutOpen}
+      >
         <button
           type="button"
           onClick={() => {
@@ -174,13 +199,12 @@ export function ChardinExperience() {
           Close description
         </button>
         <PavilionDescription />
-      </aside>
-      {!sky.available &&
-        ["ready", "running", "paused", "recovered"].includes(state.status) && (
-          <p className="pavilion-availability" role="status">
-            The pavilion is unavailable. You can still explore the planet.
-          </p>
+        {state.status === "paused" && (
+          <button type="button" onClick={resume}>
+            Resume
+          </button>
         )}
+      </aside>
       <details className="sky-panel">
         <summary>Light and view</summary>
         <p>
@@ -274,7 +298,11 @@ export function ChardinExperience() {
         )}
       </details>
       {helpOpen && (
-        <aside className="help-panel" aria-label="Movement guide">
+        <aside
+          id="movement-guide"
+          className="help-panel"
+          aria-label="Movement guide"
+        >
           <p>Walk with W/S or ↑/↓. Turn with A/D or ←/→.</p>
           <p>Hold Shift to run. Press Space to jump and E to act.</p>
           <p>Look around with I/J/K/L.</p>
@@ -293,9 +321,19 @@ export function ChardinExperience() {
             Escape pauses first. No sound plays.
           </p>
           <p>Pause whenever you need to step away.</p>
+          {state.status === "paused" && (
+            <button type="button" onClick={resume}>
+              Resume
+            </button>
+          )}
         </aside>
       )}
-      <div ref={lifecycleRef} className="lifecycle" aria-live="polite">
+      <div
+        ref={lifecycleRef}
+        className="lifecycle"
+        aria-live="polite"
+        hidden={state.status === "paused" && (helpOpen || aboutOpen)}
+      >
         {(state.status === "checking" || state.status === "loading") && (
           <section className="pause-panel" role="status">
             <p>Preparing the world…</p>
@@ -311,6 +349,7 @@ export function ChardinExperience() {
               of a quiet planet.
             </h1>
             <p>Walk the curved grass to a quiet room open to the sky.</p>
+            {availability}
             <button type="button" className="enter-button" onClick={begin}>
               Enter Chardin
             </button>
@@ -328,6 +367,7 @@ export function ChardinExperience() {
                 when you are ready.
               </p>
             )}
+            {availability}
             <div className="pause-actions">
               <button type="button" className="enter-button" onClick={resume}>
                 Resume
@@ -398,6 +438,12 @@ export function ChardinExperience() {
         />
         <span className="sr-only">Experience status: </span>
         {state.status}
+        {runtimeReady && !sky.available && (
+          <span>
+            {" "}
+            The pavilion is unavailable. You can still explore the planet.
+          </span>
+        )}
         {runtimeReady && sky.available && (
           <span className="sr-only">{`Light sequence: ${sky.phase}, ${sky.playback}.${sky.viewing ? " Aperture view." : ""}`}</span>
         )}

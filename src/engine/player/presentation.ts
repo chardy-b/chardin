@@ -75,7 +75,7 @@ export function createPresentation() {
       alpha: number,
       collider?: SurfaceCollider,
     ) {
-      const t = previous.mode === current.mode ? clamp(alpha) : 1
+      const t = clamp(alpha)
       cameraPosition.lerpVectors(previous.position, current.position, t)
       cameraTarget.lerpVectors(previous.target, current.target, t)
       cameraUp.lerpVectors(previous.up, current.up, t).normalize()

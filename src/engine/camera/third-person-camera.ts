@@ -13,6 +13,7 @@ export interface ThirdPersonCameraState {
   pitch: number
   mode?: "walking" | "eye" | "view" | "blocked"
   hideTraveler?: boolean
+  transitioning?: boolean
 }
 
 export interface ThirdPersonCameraConfig {
@@ -172,4 +173,65 @@ export function updateThirdPersonCamera(
   )
     return eyePose("eye")
   return desired
+}
+
+/** The same reserved avatar capsule as the obstruction resolver. Visibility
+ * releases with extra clearance, independently of a moving rig's convergence. */
+export function cameraIntersectsTraveler(
+  position: THREE.Vector3,
+  feet: THREE.Vector3,
+  up: THREE.Vector3,
+  wasHidden = false,
+) {
+  const x = position.x - feet.x,
+    y = position.y - feet.y,
+    z = position.z - feet.z
+  const height = THREE.MathUtils.clamp(
+    x * up.x + y * up.y + z * up.z,
+    0.35,
+    0.95,
+  )
+  return (
+    Math.hypot(x - up.x * height, y - up.y * height, z - up.z * height) <
+    0.35 + 0.12 + 0.02 + (wasHidden ? 0.1 : 0)
+  )
+}
+
+/** Fixed-step transition; rendering only interpolates these immutable samples.
+ * Both the travel path and the final sightline must remain obstruction-free. */
+export function easeCameraTransition(
+  previous: ThirdPersonCameraState,
+  desired: ThirdPersonCameraState,
+  seconds: number,
+  collider?: Pick<SurfaceCollider, "sweepCamera">,
+): ThirdPersonCameraState {
+  if (
+    seconds <= 0 ||
+    (!previous.transitioning && previous.mode === desired.mode)
+  )
+    return desired
+  const t = 1 - Math.exp(-seconds / 0.12)
+  const position = previous.position.clone().lerp(desired.position, t)
+  const target = previous.target.clone().lerp(desired.target, t)
+  const up = previous.up.clone().lerp(desired.up, t).normalize()
+  if (
+    collider &&
+    (collider.sweepCamera(previous.position, position, 0.12) ||
+      collider.sweepCamera(target, position, 0.12))
+  )
+    return desired
+  const transitioning =
+    position.distanceTo(desired.position) + target.distanceTo(desired.target) >
+    0.001
+  return {
+    ...desired,
+    position: transitioning ? position : desired.position,
+    target: transitioning ? target : desired.target,
+    up,
+    transitioning,
+    // Architectural suppression belongs to the requested rig. The rendered
+    // camera's capsule clearance owns proximity suppression, not convergence:
+    // a moving destination can keep this transition active indefinitely.
+    hideTraveler: desired.hideTraveler,
+  }
 }

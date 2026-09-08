@@ -337,18 +337,31 @@ export function createSkyspaceLandmark(
     object.name = "Original skyspace pavilion"
     object.matrix.copy(structure.matrix)
     object.matrixAutoUpdate = false
-    const shell = new THREE.MeshToonMaterial({ color: "#B2AB95", gradientMap })
+    const shell = new THREE.MeshToonMaterial({
+      color: "#B8B1A0",
+      gradientMap,
+      vertexColors: true,
+    })
     scope.defer(() => shell.dispose())
     const wall = new THREE.MeshBasicMaterial({ color: "#ADA89C" })
     scope.defer(() => wall.dispose())
-    const floor = new THREE.MeshToonMaterial({ color: "#766B59", gradientMap })
+    const floor = new THREE.MeshToonMaterial({
+      color: "#A49A83",
+      gradientMap,
+      vertexColors: true,
+    })
     scope.defer(() => floor.dispose())
-    const edge = new THREE.MeshToonMaterial({ color: "#C2B99E", gradientMap })
+    const edge = new THREE.MeshToonMaterial({
+      color: "#C8C0AC",
+      gradientMap,
+      vertexColors: true,
+    })
     scope.defer(() => edge.dispose())
     const geometry = new THREE.BufferGeometry()
     scope.defer(() => geometry.dispose())
     const positions: number[] = [],
       normals: number[] = [],
+      colors: number[] = [],
       indices: number[] = []
     const triangles = [...structure.triangles, ...structure.decoration]
     const skirtBottoms: number[] = []
@@ -361,9 +374,26 @@ export function createSkyspaceLandmark(
           indices.push(positions.length / 3)
           positions.push(...p.toArray())
           normals.push(...t.normal.toArray())
+          // Quiet continuous pigment reinforces the base and wall thickness.
+          // Interior score material remains independently controlled.
+          const base = THREE.MathUtils.lerp(
+            0.86,
+            1,
+            THREE.MathUtils.smoothstep(p.y, 0.12, 1.4),
+          )
+          const ramp =
+            t.id === "ramp" ? THREE.MathUtils.smoothstep(p.z, 2.6, 3.25) : 0
+          const value =
+            material === 0 ? base * (t.id === "roof-edge" ? 0.9 : 1) : 1
+          colors.push(
+            value * (1 - ramp * 0.18),
+            value * (1 - ramp * 0.12),
+            value * (1 - ramp * 0.21),
+          )
         }
       geometry.addGroup(start, indices.length - start, material)
     }
+    geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3))
     geometry.setIndex(indices)
     geometry.setAttribute(
       "normal",

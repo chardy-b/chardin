@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "id": "wil145-original-meadow-traveler-presentation",
+  "id": "wil146-original-meadow-traveler-presentation",
   "createdAt": "2026-09-08",
   "creator": "Codex implementation agent, commissioned for Chardin; human ownership confirmation pending",
-  "source": "Original first-principles authoring; local WIL-124/WIL-125 design and supplied Loop 1 review only",
+  "source": "Original first-principles authoring from local code, supplied Loop 2 review and user WIL-146 plan",
   "externalInputs": [],
-  "baseCommit": "939b8050f79d7ed023bcf40255765f03417a4ef9",
-  "generationCommand": "pnpm generate:traveler; pnpm exec vitest run tests/unit/engine/traveler-authorship.test.ts tests/unit/engine/meadow-presentation.test.ts",
+  "baseCommit": "0778ee06d137f4258a29885a7baf016e2857d51f",
+  "generationCommand": "pnpm generate:traveler",
   "dependencyVersions": {
     "three": "0.185.1",
     "postprocessing": "6.39.4"
@@ -14,11 +14,21 @@
   "parameters": {
     "terrainSeed": "0x43484152",
     "tierInstances": [520, 960, 1520],
-    "clusterTriangles": 48,
-    "tuftSilhouettes": 3,
-    "bladeProfiles": 6,
+    "plantSilhouettes": [
+      "low broad leaves",
+      "medium folded fan",
+      "accent two stems"
+    ],
+    "plantTriangles": [24, 24, 16],
+    "plantHeights": [0.13, 0.27, 0.42],
+    "plantDrawsPerTier": 3,
     "windMaximumLocalDisplacement": 0.032,
+    "windPhase": "per species; shared within species",
     "sweptScaledFootprint": 0.28,
+    "terrainRampBytes": 4,
+    "terrainRampFilter": "linear",
+    "travelerRampFilter": "nearest",
+    "travelerVersion": 3,
     "walk": {
       "duration": 0.8,
       "speed": 1.65,
@@ -33,18 +43,20 @@
     "jointKeySamplesPerClip": 65,
     "tracksPerClip": 16,
     "rootTranslationTracks": 0,
-    "travelerRampTextureBytes": 4,
     "contactShadeTriangles": 32,
+    "contactShadeMaterials": 2,
+    "footAnchorReleaseBlend": [0.1, 0.18],
+    "cameraTransitionSeconds": 0.12,
+    "addedTextures": 0,
     "addedRenderTargets": 0,
     "addedPostprocessingPasses": 0,
     "addedAudioBytes": 0,
-    "clipNames": ["Idle", "Walk", "Run", "Jump"],
-    "artContract": "docs/design/wil145-visual-loop.md"
+    "artContract": "docs/design/wil146-visual-loop.md"
   },
-  "modifications": "Rebuilt traveler ring sections, hierarchy and baked IK gait; coherent terrain/meadow, bounded wind, terrain seating/contact shading, speed-coherent pose/camera presentation and compact HUD. Original ramp/aperture/collision/score geometry unchanged. Five existing strict desktop/mobile/tablet visual baselines were regenerated after controller review and recorded in docs/asset-inventory.json.",
+  "modifications": "Separate plant species, composed masses/gaps, continuous terrain/architecture diffuse response, refined traveler v3 and original baked action, bounded foot placement and camera transitions, consistent responsive UI. Collider/aperture/light-score/motor semantics remain unchanged. Five strict responsive baselines were deliberately regenerated after controller behavioral and visual inspection.",
   "rightsStatus": "original; repository license pending",
   "rightsHolder": "Chardin project owner confirmation pending; agent-assisted authorship does not establish legal ownership",
-  "permissionEvidence": "User WIL-145 request authorizes local implementation; no public distribution or license grant",
+  "permissionEvidence": "User WIL-146 request authorizes local implementation and review, not public distribution",
   "permittedUse": "Local authorized repository implementation and review; public release requires owner rights/license confirmation",
   "attribution": "This record, public/models/README.md and docs/asset-audit.md",
   "dependencyNoticeLocations": [
@@ -54,7 +66,7 @@
   "review": {
     "reviewer": null,
     "date": null,
-    "decision": "Independent originality/quality/rights review and browser visual acceptance pending"
+    "decision": "Independent Astra visual review scored Loop 3 at 5.4/10; independent implementation review approved after focused and full zero-retry browser revalidation. WIL-147 owns the next visual iteration and larger-world work."
   },
   "files": [
     {
@@ -72,10 +84,10 @@
       "rights": "original-repository-license-undecided"
     },
     {
-      "path": "src/engine/assets/manifest.ts",
-      "bytes": 4233,
-      "sha256": "b9dfd8ceab25a1c608eece0844bdd7d27437d7795c37dd9707bdd2485bb3dbb0",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "path": "src/engine/world/grass.ts",
+      "bytes": 9285,
+      "sha256": "490041e6be6c14f16564f01a4caa21b3ed683b1651c89195b13e0a7362dc1529",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
@@ -86,24 +98,10 @@
       "rights": "original-repository-license-undecided"
     },
     {
-      "path": "src/engine/world/grass.ts",
-      "bytes": 9285,
-      "sha256": "490041e6be6c14f16564f01a4caa21b3ed683b1651c89195b13e0a7362dc1529",
-      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
-      "rights": "original-repository-license-undecided"
-    },
-    {
       "path": "src/engine/world/skyspace-landmark.ts",
       "bytes": 12795,
       "sha256": "c865145b894ab0eb09262eecbe4c411e65112bc3799d002e7ec91951a54e3b40",
       "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
-      "rights": "original-repository-license-undecided"
-    },
-    {
-      "path": "src/engine/world/landmark-anchor.ts",
-      "bytes": 931,
-      "sha256": "8a16f842221a953bb2b3a8fb291442c849a1690c266356a5682e03ddf44cacde",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
@@ -117,6 +115,13 @@
       "path": "src/engine/player/presentation.ts",
       "bytes": 3681,
       "sha256": "41d0f94af67bc094bc747d696d7873da2f286efc2638087c50ba659c16c0424c",
+      "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/player/foot-placement.ts",
+      "bytes": 5030,
+      "sha256": "e28329338864575066d8bad687fa80ff8e1e93bf21e41fcd71eb4082069225fc",
       "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
@@ -139,13 +144,6 @@
       "bytes": 30198,
       "sha256": "956592a47c92395c80404d99f73edfbce2095a7a60e049a5299de14ec262121f",
       "source": "Original agent-assisted Chardin WIL-146 work; docs/design/wil146-provenance.json; first-principles plant silhouettes, composed fields, ring lofts and presentation IK; no external creative inputs",
-      "rights": "original-repository-license-undecided"
-    },
-    {
-      "path": "src/engine/debug/test-api.ts",
-      "bytes": 2111,
-      "sha256": "92da8924f713a372ba49a33faf767eac291e46cccca9733910ff23c17939093a",
-      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
       "rights": "original-repository-license-undecided"
     },
     {
@@ -177,5 +175,5 @@
       "rights": "original-repository-license-undecided"
     }
   ],
-  "currentByteAmendment": "WIL-146 updates current file integrity records below. Historical authoring parameters above describe the earlier loop, not the current geometry/presentation. Current implementation and exact parameters: docs/design/wil146-provenance.json and wil146-visual-loop.md. Rights/review remain pending."
+  "browserRepairAmendment": "Local WIL-146 regression repair: rendered-camera capsule visibility hysteresis, paused presentation and independent wind-time ownership, stable equal-endpoint FOV, and normal-flow lifecycle availability status. Existing collision safety, motor, score, assets, formal captures and strict pixel tolerances preserved. Browser revalidation passed: focused pause scenario passed three consecutive zero-retry runs and the full desktop/mobile suite passed 29 tests with 5 intentional skips and zero retries. Retained Loop 3 score: 5.4/10. See wil146-visual-loop.md."
 }

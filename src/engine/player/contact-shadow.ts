@@ -40,7 +40,7 @@ export function createContactShadow() {
   object.name = "Traveler contact shade"
   const feet = [
     new THREE.Mesh(geometry, material),
-    new THREE.Mesh(geometry, material),
+    new THREE.Mesh(geometry, material.clone()),
   ]
   object.add(...feet)
   const axis = new THREE.Vector3(0, 1, 0)
@@ -56,7 +56,8 @@ export function createContactShadow() {
       if (disposed) return
       const foot = feet[index]
       if (!foot) return
-      foot.visible = height < 0.3
+      foot.visible = Number.isFinite(height) && height < 0.3
+      foot.material.opacity = 1 - THREE.MathUtils.smoothstep(height, 0.015, 0.3)
       foot.position.copy(position).addScaledVector(normal, 0.003)
       foot.quaternion.setFromUnitVectors(axis, normal)
       foot.scale.setScalar(1 + THREE.MathUtils.clamp(height, 0, 0.3))
@@ -67,7 +68,7 @@ export function createContactShadow() {
       object.removeFromParent()
       object.clear()
       geometry.dispose()
-      material.dispose()
+      for (const foot of feet) foot.material.dispose()
     },
   }
 }

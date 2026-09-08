@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { captureManualFrame } from "./helpers/manual-frame"
+import { finishWebGLFrame } from "./helpers/webgl"
 
 function intersects(
   first: { x: number; y: number; width: number; height: number },
@@ -229,10 +230,39 @@ test.describe("Chardin world", () => {
       .getByRole("button", { name: "Pause" })
     await touchPause.tap()
     await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible()
+    // Pause cancels the simulation RAF immediately, but the final submitted GPU
+    // frame may still be waiting for compositor presentation. Finish it and cross
+    // one presentation-only frame before establishing the frozen reference.
+    await canvas.evaluate(finishWebGLFrame)
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    )
+    const beforeState = await page.evaluate(() =>
+      window.__CHARDIN_TEST__!.snapshot(),
+    )
     const paused = await canvas.screenshot()
+    await testInfo.attach("mobile-paused-before.png", {
+      body: paused,
+      contentType: "image/png",
+    })
     await touchPause.tap({ force: true })
     await page.waitForTimeout(400)
-    expect((await canvas.screenshot()).equals(paused)).toBe(true)
+    await canvas.evaluate(finishWebGLFrame)
+    const afterState = await page.evaluate(() =>
+      window.__CHARDIN_TEST__!.snapshot(),
+    )
+    const pausedAfter = await canvas.screenshot()
+    await testInfo.attach("mobile-paused-after.png", {
+      body: pausedAfter,
+      contentType: "image/png",
+    })
+    await testInfo.attach("mobile-paused-state.json", {
+      body: JSON.stringify({ before: beforeState, after: afterState }, null, 2),
+      contentType: "application/json",
+    })
+    expect(afterState.simulationTime).toBe(beforeState.simulationTime)
+    expect(pausedAfter.equals(paused)).toBe(true)
     if (process.env.CHARDIN_EVIDENCE_DIR) {
       await page.screenshot({
         path: `${process.env.CHARDIN_EVIDENCE_DIR}/mobile-paused.png`,
