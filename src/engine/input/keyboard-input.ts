@@ -39,15 +39,21 @@ export class KeyboardInput implements InputAdapter {
   private readonly suppressedEdgesUntilKeyUp = new Set<string>()
   private disposed = false
 
-  constructor(private readonly target: Window) {
+  constructor(
+    private readonly target: Window,
+    private onRelinquish?: () => void,
+  ) {
     target.addEventListener("keydown", this.onKeyDown)
     target.addEventListener("keyup", this.onKeyUp)
     target.addEventListener("focusin", this.onFocusIn)
   }
 
   private onFocusIn = (event: FocusEvent) => {
-    // Relinquish held keys and queued edges when focus moves into native UI.
-    if (isInteractiveTarget(event.target)) this.clear()
+    if (this.disposed || !isInteractiveTarget(event.target)) return
+    // The runtime may already have sampled an edge in a zero-step RAF frame.
+    // Relinquish both queues synchronously, before the next simulation tick.
+    this.clear()
+    this.onRelinquish?.()
   }
 
   private onKeyDown = (event: KeyboardEvent) => {
@@ -135,6 +141,7 @@ export class KeyboardInput implements InputAdapter {
     if (this.disposed) return
     this.clear()
     this.disposed = true
+    this.onRelinquish = undefined
     this.target.removeEventListener("keydown", this.onKeyDown)
     this.target.removeEventListener("keyup", this.onKeyUp)
     this.target.removeEventListener("focusin", this.onFocusIn)

@@ -197,7 +197,16 @@ export function createThreeRuntime(
       })
       return adapter
     }
-    adapters.push(ownAdapter(new KeyboardInput(window)))
+    adapters.push(
+      ownAdapter(
+        new KeyboardInput(window, () => {
+          if (disposed) return
+          input.clear()
+          frameIntent = emptyIntent()
+          clearPendingEdges()
+        }),
+      ),
+    )
     adapters.push(ownAdapter(new GamepadInput()))
     if (options.touchRoot)
       adapters.push(ownAdapter(new TouchInput(options.touchRoot)))
