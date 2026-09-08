@@ -3,6 +3,7 @@ import { join } from "node:path"
 import { gzipSync } from "node:zlib"
 import { identity, requireExactHead, sha256 } from "./lib/evidence.mjs"
 import { summarize } from "./lib/measurement.mjs"
+import { loadPerformanceBudgets } from "./lib/performance-budgets.mjs"
 
 const state = identity()
 requireExactHead(state)
@@ -40,9 +41,7 @@ for (const path of await files(".next/static")) {
 }
 if (!entries.some((entry) => entry.path.endsWith(".js")))
   throw new Error("No production JS chunks found")
-const budgets = JSON.parse(
-  await readFile("docs/performance-budgets.json", "utf8"),
-)
+const budgets = loadPerformanceBudgets()
 const report = {
   schema: 1,
   ...state,

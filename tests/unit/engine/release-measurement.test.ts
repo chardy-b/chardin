@@ -24,7 +24,8 @@ it("keeps stalls, uses nearest-rank percentiles and cannot pass missing budgets"
   })
   for (const sample of [[], [NaN], [Infinity], [-1]])
     expect(() => summarize(sample, 16)).toThrow()
-  expect(() => summarize([1], 0)).toThrow()
+  for (const budget of [undefined, "16", 0, -1, NaN, Infinity])
+    expect(() => summarize([1], budget)).toThrow()
 })
 it("refuses dirty worktrees, missing PR head and stale head", () => {
   const head = "a".repeat(40)

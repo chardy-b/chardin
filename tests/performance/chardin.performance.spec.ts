@@ -3,8 +3,10 @@ import { execFileSync } from "node:child_process"
 import { expect, test } from "@playwright/test"
 import { installWebGLProbe } from "./webgl-probe"
 import { summarize } from "../../scripts/lib/measurement.mjs"
-import budgets from "../../docs/performance-budgets.json"
+import { loadPerformanceBudgets } from "../../scripts/lib/performance-budgets.mjs"
 import type {} from "../../src/engine/debug/test-api"
+
+const budgets = loadPerformanceBudgets()
 
 test("bounded fixed-workload release measurement", async ({
   page,
