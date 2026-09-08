@@ -1,5 +1,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test"
-import { captureManualFrame } from "./helpers/manual-frame"
+import {
+  captureManualFrame,
+  captureManualWorldFrame,
+} from "./helpers/manual-frame"
 
 async function tabTo(page: Page, target: Locator) {
   for (let i = 0; i < 30; i++) {
@@ -93,13 +96,25 @@ test("44 CSS-pixel controls and live reduced motion", async ({
     "data-reduced-motion",
     "true",
   )
-  await page.evaluate(() => window.__CHARDIN_TEST__!.step(1))
-  const first = await captureManualFrame(page)
-  await page.evaluate(() => window.__CHARDIN_TEST__!.step(120))
-  expect((await captureManualFrame(page)).equals(first)).toBe(true)
-  await page.evaluate(() =>
-    window.__CHARDIN_TEST__!.step(60, { move: { x: 0, y: 1 } }),
-  )
+  const first = await captureManualWorldFrame(page, 1)
+  await info.attach("reduced-motion-before", {
+    body: await captureManualFrame(page),
+    contentType: "image/png",
+  })
+  const still = await captureManualWorldFrame(page, 120)
+  await info.attach("reduced-motion-after", {
+    body: await captureManualFrame(page),
+    contentType: "image/png",
+  })
+  await info.attach("reduced-motion-world-frames.json", {
+    body: JSON.stringify({ first, still }),
+    contentType: "application/json",
+  })
+  expect(still).toEqual(first)
+  const moved = await captureManualWorldFrame(page, 60, {
+    move: { x: 0, y: 1 },
+  })
+  expect(moved.sha256).not.toBe(first.sha256)
   expect(
     await page.evaluate(() => window.__CHARDIN_TEST__!.snapshot().distance),
   ).toBeGreaterThan(1)
