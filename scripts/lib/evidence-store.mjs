@@ -155,8 +155,9 @@ export function reserveAttempt({
   return dir
 }
 
+// Public attempt-directory inputs may be absolute or relative to process.cwd().
 export function inventory(dir) {
-  safeDirectory(dir)
+  dir = safeDirectory(dir)
   const entries = []
   const walk = (folder) => {
     for (const name of readdirSync(folder).sort()) {
@@ -196,7 +197,7 @@ export function finalizeAttempt(dir, result) {
 
 // A terminal result alone is insufficient: interrupted finalization is incomplete.
 export function readAttempt(dir) {
-  safeDirectory(dir)
+  dir = safeDirectory(dir)
   if (!existsSync(join(dir, "started.json")))
     return { status: "incomplete", reason: "Started record was not persisted" }
   let started

@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { isAbsolute, join, relative } from "node:path"
 import {
   contained,
   exclusiveLog,
@@ -32,6 +32,26 @@ beforeEach(() => {
 afterEach(() => rmSync(cwd, { recursive: true, force: true }))
 const reserve = (id) =>
   reserveAttempt({ cwd, head, gate: "browser", ...(id ? { id } : {}) })
+
+it("verifies a real sealed attempt by relative and absolute directory paths", () => {
+  const dir = reserve()
+  const relativeDir = relative(process.cwd(), dir)
+  expect(isAbsolute(relativeDir)).toBe(false)
+  writeExclusive(dir, "nested/artifact.bin", Buffer.from([0, 1, 255]))
+  finalizeAttempt(dir, { status: "pass", exitCode: 0 })
+  const result = readAttempt(dir)
+  expect(result).toMatchObject({ status: "pass", exitCode: 0 })
+  expect(readAttempt(relativeDir)).toEqual(result)
+  expect(inventory(relativeDir)).toEqual(inventory(dir))
+
+  writeExclusive(dir, "extra.txt", "unexpected membership")
+  for (const path of [dir, relativeDir])
+    expect(() => readAttempt(path)).toThrow(/membership/)
+  rmSync(join(dir, "extra.txt"))
+  writeFileSync(join(dir, "nested/artifact.bin"), "tampered")
+  for (const path of [dir, relativeDir])
+    expect(() => readAttempt(path)).toThrow(/hash/)
+})
 
 it("reserves exclusive attempts, retains failed runs and hashes all bytes including manifests", () => {
   const first = reserve()
