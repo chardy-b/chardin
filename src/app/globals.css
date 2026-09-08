@@ -6,6 +6,10 @@
   --mist: #b9d9d4;
   --coral: #e86f51;
   --line: rgba(22, 48, 45, 0.25);
+  --hud-inset: clamp(0.75rem, 2.5vw, 2rem);
+  --hud-type: 0.75rem;
+  --control-radius: 0.35rem;
+  --control-surface: rgba(245, 240, 222, 0.94);
 }
 * {
   box-sizing: border-box;
@@ -104,8 +108,8 @@ canvas:focus-visible {
 }
 .brand-lockup {
   position: absolute;
-  top: clamp(1.25rem, 3vw, 2.5rem);
-  left: clamp(1.25rem, 3vw, 2.5rem);
+  top: var(--hud-inset);
+  left: var(--hud-inset);
   display: flex;
   gap: 0.7rem;
   align-items: center;
@@ -126,15 +130,20 @@ canvas:focus-visible {
 }
 .brand-note {
   margin: 0.2rem 0 0;
-  font-size: 0.54rem;
-  opacity: 0.72;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
 }
 .experience-actions {
   position: absolute;
-  top: clamp(1.25rem, 3vw, 2.5rem);
-  right: clamp(1.25rem, 3vw, 2.5rem);
+  top: var(--hud-inset);
+  right: var(--hud-inset);
   display: flex;
-  gap: 0.55rem;
+  gap: 0;
+  padding: 0.15rem;
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+  background: var(--control-surface);
+  font-size: var(--hud-type);
 }
 .experience-actions button,
 .pause-actions button,
@@ -213,7 +222,7 @@ canvas:focus-visible {
 .help-panel {
   position: absolute;
   top: 5.5rem;
-  right: clamp(1.25rem, 3vw, 2.5rem);
+  right: var(--hud-inset);
   width: min(20rem, calc(100vw - 2.5rem));
   padding: 1rem 1.15rem;
   border: 1px solid var(--line);
@@ -230,65 +239,13 @@ canvas:focus-visible {
   margin-top: 0.45rem;
   opacity: 0.68;
 }
-.status-line {
-  position: absolute;
-  left: clamp(1.25rem, 3vw, 2.5rem);
-  bottom: 1.4rem;
-  margin: 0;
-  font-size: 0.65rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.status-dot {
-  display: inline-block;
-  width: 0.5rem;
-  height: 0.5rem;
-  margin-right: 0.45rem;
-  border-radius: 50%;
-  background: currentColor;
-}
-.status-running {
-  background: #5f8a4d;
-}
-.status-failed {
-  background: var(--coral);
-}
 .failure-panel a {
   color: var(--paper);
   text-underline-offset: 0.25rem;
 }
-@media (max-width: 600px) {
-  .brand-note {
-    display: none;
-  }
-  .experience-actions {
-    top: auto;
-    bottom: 1.15rem;
-    right: 1rem;
-  }
-  .help-panel {
-    top: auto;
-    right: 1rem;
-    bottom: 5rem;
-  }
-  .status-line {
-    bottom: 5rem;
-  }
-  .welcome-panel {
-    transform: translateY(0.75rem);
-  }
-}
 @media (hover: none), (pointer: coarse) {
   .touch-controls {
     display: flex;
-  }
-  .status-line {
-    bottom: calc(7rem + env(safe-area-inset-bottom));
-  }
-  .experience-actions {
-    top: max(0.75rem, env(safe-area-inset-top));
-    right: max(0.75rem, env(safe-area-inset-right));
-    bottom: auto;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -301,25 +258,19 @@ canvas:focus-visible {
   }
 }
 
-/* Opaque semantic surfaces preserve HUD contrast on either hemisphere. */
-.status-line {
-  background: var(--paper);
-  color: var(--ink);
-  border-radius: 999px;
-  padding: 0.55rem 0.75rem;
-}
 .quality-control {
   position: absolute;
-  top: 5.25rem;
-  left: clamp(1.25rem, 3vw, 2.5rem);
+  top: 5.1rem;
+  left: var(--hud-inset);
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.72rem;
+  font-size: var(--hud-type);
   color: var(--ink);
   background: var(--paper);
   padding-left: 0.75rem;
-  border-radius: 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
 }
 .quality-control select {
   font: inherit;
@@ -336,12 +287,6 @@ select:focus-visible {
 .enter-button {
   color: var(--ink);
 }
-@media (max-width: 600px) {
-  .quality-control {
-    top: 4.5rem;
-  }
-}
-
 .failure-panel a {
   display: inline-flex;
   align-items: center;
@@ -393,17 +338,19 @@ select:focus-visible {
 }
 .sky-panel {
   position: absolute;
-  top: 9rem;
-  left: clamp(1.25rem, 3vw, 2.5rem);
-  width: min(20rem, calc(100vw - 2.5rem));
+  top: 5.1rem;
+  left: calc(var(--hud-inset) + 13rem);
+  width: fit-content;
+  min-width: 9rem;
+  max-width: min(20rem, calc(100vw - 2.5rem));
   max-height: calc(100dvh - 18rem);
   overflow: auto;
   background: var(--paper);
   color: var(--ink);
   border: 1px solid var(--control-border);
   border-radius: 0.4rem;
-  padding: 0.65rem;
-  font-size: 0.8rem;
+  padding: 0 0.75rem;
+  font-size: var(--hud-type);
   z-index: 2;
 }
 .sky-panel summary {
@@ -411,6 +358,17 @@ select:focus-visible {
   display: list-item;
   align-content: center;
   cursor: pointer;
+}
+.sky-panel[open] {
+  width: min(20rem, calc(100vw - 2.5rem));
+  padding-bottom: 0.75rem;
+}
+.experience-actions button {
+  border: 0;
+  border-radius: var(--control-radius);
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  backdrop-filter: none;
 }
 .sky-panel p {
   line-height: 1.5;
@@ -493,42 +451,41 @@ summary:focus-visible {
   outline-offset: 3px;
   box-shadow: 0 0 0 6px var(--paper);
 }
-@media (max-width: 600px) {
+@media (max-width: 900px) {
   .brand-lockup {
     top: 1rem;
-    left: 1rem;
+    left: var(--hud-inset);
   }
   .experience-actions {
-    top: 0.5rem;
-    bottom: auto;
-    right: 0.5rem;
-    max-width: calc(100% - 8rem);
-    gap: 0.25rem;
+    top: 3.8rem;
+    left: var(--hud-inset);
+    right: var(--hud-inset);
+    max-width: none;
+    justify-content: start;
   }
   .experience-actions button {
-    padding: 0.5rem;
-    font-size: 0.75rem;
+    flex: 1;
+    padding-inline: 0.4rem;
   }
   .quality-control {
-    top: 6.5rem;
-    left: 1rem;
+    top: 7.5rem;
+    font-size: 0.7rem;
   }
   .sky-panel {
-    top: 10rem;
-    left: 1rem;
-    max-height: calc(100dvh - 19rem);
+    top: 7.5rem;
+    left: auto;
+    right: var(--hud-inset);
+    min-width: 8rem;
+    max-height: calc(100dvh - 18rem);
   }
-  .description-panel {
-    top: 6.5rem;
-    max-height: calc(100dvh - 8rem);
+  .sky-panel[open] {
+    width: min(20rem, calc(100vw - 1.5rem));
   }
+  .description-panel,
   .help-panel {
-    top: 6.5rem;
+    top: 7.5rem;
     bottom: auto;
-    max-height: calc(100dvh - 8rem);
-  }
-  .status-line {
-    bottom: calc(9rem + env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 9rem);
   }
   .touch-cluster {
     gap: 0.25rem;
@@ -542,9 +499,20 @@ summary:focus-visible {
   }
 }
 @media (max-height: 500px) {
+  .brand-note {
+    display: none;
+  }
+  .experience-actions {
+    top: 0.5rem;
+    left: auto;
+    max-width: calc(100% - 8rem);
+  }
+  .quality-control {
+    top: 4rem;
+  }
   .sky-panel {
-    top: 8.5rem;
-    max-height: calc(100dvh - 10rem);
+    top: 4rem;
+    max-height: calc(100dvh - 5rem);
   }
   .description-panel,
   .help-panel {
@@ -569,4 +537,18 @@ summary:focus-visible {
   border-radius: 0.4rem;
   font-size: 0.85rem;
   line-height: 1.5;
+}
+
+@media (max-width: 360px) {
+  .quality-control {
+    padding-left: 0;
+  }
+  .quality-control > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }

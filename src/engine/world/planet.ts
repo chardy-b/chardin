@@ -16,37 +16,24 @@ export const PLANET_PROFILES = {
 
 export type PlanetProfile = keyof typeof PLANET_PROFILES
 
-const PALETTE = [
-  new THREE.Color(0x587344),
-  new THREE.Color(0x6f8350),
-  new THREE.Color(0x87915a),
-  new THREE.Color(0x9a8b50),
-  new THREE.Color(0x4e6842),
-] as const
-const EARTH = new THREE.Color(0xa3744b)
+const MEADOW = new THREE.Color(0x6d8054)
+const SHADE = new THREE.Color(0x61764e)
+const EARTH = new THREE.Color(0x948363)
 
-function hash(seed: number, value: number) {
-  let result = (seed ^ Math.imul(value + 1, 0x9e3779b1)) >>> 0
-  result = Math.imul(result ^ (result >>> 16), 0x21f0aaad)
-  result = Math.imul(result ^ (result >>> 15), 0x735a2d97)
-  return ((result ^ (result >>> 15)) >>> 0) / 4_294_967_296
-}
-
-function faceColor(normal: THREE.Vector3, seed: number, face: number) {
-  const region =
-    normal.dot(new THREE.Vector3(0.62, 0.18, -0.76)) * 0.8 +
-    normal.dot(new THREE.Vector3(-0.22, 0.95, 0.21)) * 0.35
-  const inSpawnPatch = normal.angleTo(SPAWN_DIRECTION) < SPAWN_PATCH_ANGLE
-  if (inSpawnPatch) {
-    return EARTH.clone().offsetHSL(0, 0, (hash(seed, face) - 0.5) * 0.055)
-  }
-  const paletteIndex =
-    Math.abs(Math.floor(region * 2.2 + hash(seed, face) * 2.1)) % PALETTE.length
-  return PALETTE[paletteIndex]!.clone().offsetHSL(
-    (hash(seed + 17, face) - 0.5) * 0.012,
-    0,
-    (hash(seed + 31, face) - 0.5) * 0.045,
-  )
+/** Continuous, low-frequency pigment fields, independent of triangulation.
+ * Equal positions always share pigment and normals, including across LODs. */
+export function terrainColor(normal: THREE.Vector3, seed = PLANET_SEED) {
+  const phase = (seed % 997) / 997
+  const region = 0.5 + 0.5 * Math.sin(normal.x * 3 + normal.z * 2 + phase)
+  const color = MEADOW.clone().lerp(SHADE, region * 0.65)
+  const clearing =
+    1 -
+    THREE.MathUtils.smoothstep(
+      normal.angleTo(SPAWN_DIRECTION),
+      SPAWN_PATCH_ANGLE * 0.55,
+      SPAWN_CLEARING_ANGLE + 0.1,
+    )
+  return color.lerp(EARTH, clearing * 0.7)
 }
 
 export type PlanetSurfaceSample = {
@@ -157,20 +144,20 @@ export function createPlanet({
   const positions = geometry.getAttribute("position")
   const colors = new Float32Array(positions.count * 3)
   const center = new THREE.Vector3()
-  for (let offset = 0; offset < positions.count; offset += 3) {
-    center
-      .set(0, 0, 0)
-      .add(new THREE.Vector3().fromBufferAttribute(positions, offset))
-      .add(new THREE.Vector3().fromBufferAttribute(positions, offset + 1))
-      .add(new THREE.Vector3().fromBufferAttribute(positions, offset + 2))
-      .normalize()
-    const color = faceColor(center, seed | 0, offset / 3)
-    for (let vertex = 0; vertex < 3; vertex += 1)
-      color.toArray(colors, (offset + vertex) * 3)
+  for (let offset = 0; offset < positions.count; offset++) {
+    center.fromBufferAttribute(positions, offset).normalize()
+    terrainColor(center, seed).toArray(colors, offset * 3)
   }
   geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3))
   geometry.computeBoundingSphere()
-  geometry.computeVertexNormals()
+  // Radial normals soften the faceted surface without changing support geometry.
+  const normals = new Float32Array(positions.count * 3)
+  for (let i = 0; i < positions.count; i++)
+    center
+      .fromBufferAttribute(positions, i)
+      .normalize()
+      .toArray(normals, i * 3)
+  geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3))
   const material = createToonMaterial({
     vertexColors: true,
   })
@@ -182,8 +169,8 @@ export function createPlanet({
   return {
     mesh,
     profile: settings,
-    surfaceAt: (direction: THREE.Vector3) => {
-      const sample = sampler.sample(direction)
+    surfaceAt: (direction: THREE.Vector3, target?: PlanetSurfaceSample) => {
+      const sample = sampler.sample(direction, target)
       sample.position.add(mesh.position)
       return sample
     },

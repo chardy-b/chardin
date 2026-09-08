@@ -4,21 +4,26 @@ import * as THREE from "three"
 export function createToonMaterial(
   options: THREE.MeshToonMaterialParameters = {},
 ) {
-  const ramp = new THREE.DataTexture(
-    new Uint8Array([85, 135, 190, 245]),
-    4,
-    1,
-    THREE.RedFormat,
-  )
-  ramp.minFilter = ramp.magFilter = THREE.NearestFilter
-  ramp.generateMipmaps = false
-  ramp.needsUpdate = true
+  const ramp =
+    options.gradientMap ??
+    new THREE.DataTexture(
+      new Uint8Array([72, 128, 188, 242]),
+      4,
+      1,
+      THREE.RedFormat,
+    )
+  if (!options.gradientMap) {
+    ramp.minFilter = ramp.magFilter = THREE.NearestFilter
+    ramp.generateMipmaps = false
+    ramp.needsUpdate = true
+  }
   const material = new THREE.MeshToonMaterial({
-    gradientMap: ramp,
     emissive: 0x596548,
-    emissiveIntensity: 0.22,
+    emissiveIntensity: 0.06,
     ...options,
+    gradientMap: ramp,
   })
-  material.addEventListener("dispose", () => ramp.dispose())
+  if (!options.gradientMap)
+    material.addEventListener("dispose", () => ramp.dispose())
   return material
 }

@@ -21,6 +21,8 @@ export interface ThirdPersonCameraConfig {
   supportUp?: THREE.Vector3
   collider?: Pick<SurfaceCollider, "sweepCamera">
   viewTarget?: THREE.Vector3
+  shoulder?: number
+  compositionYaw?: number
   height: number
   distance: number
   targetHeight: number
@@ -89,7 +91,10 @@ export function updateThirdPersonCamera(
   // The motor owns the transported heading. Apply manual yaw exactly once;
   // transporting the already yawed camera forward can accumulate look on redraw.
   const forward = transportForward(up, up, traveler.forward)
-  forward.applyAxisAngle(up, -previous.yaw).normalize()
+  forward
+    .applyAxisAngle(up, -previous.yaw + (config.compositionYaw ?? 0))
+    .normalize()
+  const right = new THREE.Vector3().crossVectors(forward, up).normalize()
   const horizontalDistance = config.distance * Math.cos(previous.pitch)
   const cameraHeight =
     config.height - config.distance * Math.sin(previous.pitch)
@@ -99,8 +104,12 @@ export function updateThirdPersonCamera(
     position: traveler.position
       .clone()
       .addScaledVector(up, cameraHeight)
-      .addScaledVector(forward, -horizontalDistance),
-    target: traveler.position.clone().addScaledVector(up, config.targetHeight),
+      .addScaledVector(forward, -horizontalDistance)
+      .addScaledVector(right, config.shoulder ?? 0),
+    target: traveler.position
+      .clone()
+      .addScaledVector(up, config.targetHeight)
+      .addScaledVector(right, (config.shoulder ?? 0) * 0.65),
     up,
     forward,
     yaw: previous.yaw,

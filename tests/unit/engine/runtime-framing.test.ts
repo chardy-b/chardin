@@ -253,3 +253,119 @@ it.each([
     expect(window.__CHARDIN_TEST__!.snapshot().running).toBe(false)
   },
 )
+
+it("provides repeatable Loop 2 frames and interpolation without changing motor, light, or animation ticks", async () => {
+  const { prepareCharacterFrame, visualLoopMetadata } =
+    await import("../../e2e/helpers/visual-loop")
+  harness.fallback = false
+  const canvas = document.createElement("canvas")
+  Object.defineProperties(canvas, {
+    clientWidth: { value: 1280 },
+    clientHeight: { value: 720 },
+  })
+  let ready!: () => void
+  const loaded = new Promise<void>((resolve) => {
+    ready = resolve
+  })
+  experience = createExperience({
+    canvas,
+    getWebGL2Context: () => ({}) as WebGL2RenderingContext,
+    onState(state) {
+      if (state.status === "ready") ready()
+    },
+  })
+  await loaded
+  experience.start()
+  const api = window.__CHARDIN_TEST__!
+  const character = prepareCharacterFrame()
+  expect(character.quality).toBe("balanced")
+  expect(character.grounded).toBe(true)
+  expect(character.movement.signedSpeed).toBeCloseTo(3.3, 3)
+  const owner = harness.scene!.getObjectByName("TravelerView")!
+  const left = new THREE.Vector3(),
+    right = new THREE.Vector3()
+  owner.getObjectByName("LeftAnkle")!.getWorldPosition(left)
+  owner.getObjectByName("RightAnkle")!.getWorldPosition(right)
+  expect(left.distanceTo(right)).toBeGreaterThan(0.3)
+  const fixed = api.snapshot()
+  const invariant = () => {
+    const state = api.snapshot()
+    return [
+      state.position,
+      state.forward,
+      state.supportId,
+      state.supportUp,
+      state.simulationTime,
+      state.sky,
+      state.animation,
+    ]
+  }
+  const original = invariant()
+  let lastPosition: THREE.Vector3 | undefined
+  for (const alpha of [0, 0.25, 0.5, 0.75, 1, 0.5, 1]) {
+    api.present(alpha)
+    expect(invariant()).toEqual(original)
+    const position = owner.position.clone()
+    if (lastPosition)
+      expect(position.distanceTo(lastPosition)).toBeLessThan(0.06)
+    lastPosition = position
+  }
+  for (const invalid of [-1, 2, Number.NaN, Infinity]) api.present(invalid)
+  expect(invariant()).toEqual(original)
+  const metadata = visualLoopMetadata(fixed, {
+    commit: "a".repeat(40),
+    dirty: true,
+    diffSha256: "b".repeat(64),
+  })
+  expect(metadata.animation.phase).toBeGreaterThan(0.08)
+  metadata.player.position[0] = 999
+  expect(api.snapshot().position).toEqual(fixed.position)
+  expect(() =>
+    visualLoopMetadata(fixed, {
+      commit: "unknown",
+      dirty: true,
+      diffSha256: "",
+    }),
+  ).toThrow()
+  expect(() => prepareCharacterFrame()).toThrow("Fresh runtime")
+  experience.pause()
+  experience.skyCommand("return-to-clearing")
+  experience.resume()
+  walkToSkyspacePoint({ point: 0, facePoint: 1 })
+  api.present(1)
+  const state = api.snapshot()
+  const structure = harness.scene!.getObjectByName(
+    "Original skyspace pavilion",
+  )!
+  const project = (x: number, y: number, z: number) =>
+    new THREE.Vector3(x, y, z)
+      .applyMatrix4(structure.matrixWorld)
+      .project(harness.camera!)
+  const door = project(0, 0.9, 1.5)
+  const head = owner
+    .getObjectByName("Head")!
+    .getWorldPosition(new THREE.Vector3())
+    .project(harness.camera!)
+  expect(Math.abs(door.x - head.x)).toBeGreaterThan(0.1)
+  for (const point of [
+    [-0.73, 0.22, 1.65],
+    [0.73, 0.22, 1.65],
+    [-0.73, -1.18, 3.25],
+    [0.73, -1.18, 3.25],
+  ]) {
+    const p = project(...(point as [number, number, number]))
+    expect(Math.abs(p.x)).toBeLessThan(0.95)
+    expect(Math.abs(p.y)).toBeLessThan(0.95)
+  }
+  expect(state.cameraMode).toBe("walking")
+  const heading = new THREE.Vector3().fromArray(state.forward)
+  const up = new THREE.Vector3().fromArray(state.supportUp)
+  const side = new THREE.Vector3().crossVectors(heading, up).normalize()
+  const offset = new THREE.Vector3()
+    .fromArray(state.cameraPosition)
+    .sub(new THREE.Vector3().fromArray(state.position))
+  // Shoulder and composition yaw reinforce, rather than cancel, the view angle.
+  expect(Math.atan2(offset.dot(side), -offset.dot(heading))).toBeGreaterThan(
+    0.5,
+  )
+})

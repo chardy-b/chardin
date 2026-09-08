@@ -174,3 +174,51 @@ it("keeps the real loaded idle traveler, camera and lights identical across 120 
     runtime.dispose()
   }
 })
+
+it("presents intermediate ordinary frames without advancing motor or gait, and freezes every meadow tier", async () => {
+  window.history.replaceState({}, "", "/")
+  const canvas = document.createElement("canvas")
+  const runtime = createThreeRuntime(canvas, {} as WebGL2RenderingContext)
+  try {
+    await runtime.ready
+    runtime.start()
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }))
+    const frame = (milliseconds: number) => {
+      harness.now = milliseconds
+      harness.frame!(milliseconds)
+    }
+    frame(17)
+    const api = window.__CHARDIN_TEST__!
+    const first = api.snapshot()
+    frame(25)
+    const between = api.snapshot()
+    expect(between.position).toEqual(first.position)
+    expect(between.animation).toEqual(first.animation)
+    expect(between.simulationTime).toBe(first.simulationTime)
+    expect(between.presentation.alpha).toBeGreaterThan(first.presentation.alpha)
+    expect(between.presentation.position).not.toEqual(
+      first.presentation.position,
+    )
+    for (let i = 2; i < 30; i++) frame(i * 17)
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyW" }))
+    harness.reduced = true
+    harness.motionChanged({ matches: true })
+    const meshes = () =>
+      harness.scene!.getObjectByName(
+        "Clustered meadow grass",
+      ) as THREE.InstancedMesh
+    const frozen = Array.from(meshes().geometry.getAttribute("position").array)
+    for (const tier of ["high", "low", "balanced"] as const) {
+      runtime.setQuality!(tier)
+      expect(
+        Array.from(meshes().geometry.getAttribute("position").array),
+      ).toEqual(frozen)
+      frame(harness.now + 17)
+      expect(
+        Array.from(meshes().geometry.getAttribute("position").array),
+      ).toEqual(frozen)
+    }
+  } finally {
+    runtime.dispose()
+  }
+})

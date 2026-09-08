@@ -112,7 +112,7 @@ export function ChardinExperience() {
         <span className="brand-mark" aria-hidden="true" />
         <div>
           <p className="brand-name">Chardin</p>
-          <p className="brand-note">A small world, still becoming</p>
+          <p className="brand-note">Meadow to sky</p>
         </div>
       </header>
       <label className="quality-control">
@@ -130,7 +130,7 @@ export function ChardinExperience() {
           <option value="high">High</option>
         </select>
       </label>
-      <div className="experience-actions" aria-label="Experience controls">
+      <nav className="experience-actions" aria-label="Experience controls">
         {state.status === "running" && (
           <button type="button" onClick={() => experienceRef.current?.pause()}>
             Pause
@@ -162,7 +162,7 @@ export function ChardinExperience() {
         >
           About the pavilion
         </button>
-      </div>
+      </nav>
       <aside className="description-panel" hidden={!aboutOpen}>
         <button
           type="button"
@@ -391,7 +391,7 @@ export function ChardinExperience() {
           </section>
         )}
       </div>
-      <p className="status-line" role="status">
+      <p className="status-line sr-only" role="status">
         <span
           className={`status-dot status-${state.status}`}
           aria-hidden="true"

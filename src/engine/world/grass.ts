@@ -18,8 +18,8 @@ import {
   type PlanetProfile,
 } from "@/engine/world/planet"
 
-const MAX_FOOTPRINT = 0.09
-const GRASS_COLORS = [0x6e853f, 0x84934b, 0x9a9149, 0x60783d] as const
+const MAX_FOOTPRINT = 0.28
+const GRASS_COLORS = [0x748951, 0x84945e, 0x90986a, 0x6d8252] as const
 
 function random(seed: number) {
   let state = seed >>> 0
@@ -32,24 +32,42 @@ function random(seed: number) {
   }
 }
 
-function createTuftGeometry() {
+/** Three original two-leaf tuft silhouettes: open cup, low fan, swept pennant.
+ * Separate roots and six bowed/tapered profiles create overlapping meadow masses.
+ * Four strips per blade; one 48-triangle cluster / one instanced draw per tier. */
+export function createTuftGeometry() {
   const positions: number[] = []
-  const halfWidth = 0.035
-  for (let blade = 0; blade < 3; blade += 1) {
-    const angle = (blade * Math.PI) / 3
-    const right = new THREE.Vector3(
-      Math.cos(angle),
-      0,
-      Math.sin(angle),
-    ).multiplyScalar(halfWidth)
-    const lean = new THREE.Vector3(
-      -Math.sin(angle),
-      0,
-      Math.cos(angle),
-    ).multiplyScalar(0.035)
-    const left = right.clone().negate()
-    const tip = lean.setY(0.34)
-    positions.push(...left.toArray(), ...right.toArray(), ...tip.toArray())
+  // height, bow, width, azimuth, root x/z. Each consecutive pair is one tuft.
+  const profiles = [
+    [0.42, 0.085, 0.044, 0, -0.06, -0.01],
+    [0.28, -0.07, 0.04, 0.3, -0.06, -0.01],
+    [0.21, 0.11, 0.05, 1.4, 0.065, -0.035],
+    [0.25, -0.095, 0.048, 1.1, 0.065, -0.035],
+    [0.35, 0.08, 0.042, 3.1, 0.005, 0.055],
+    [0.31, 0.12, 0.038, 3.8, 0.005, 0.055],
+  ]
+  for (const [height, bow, width, angle, rootX, rootZ] of profiles) {
+    const point = (t: number, side: number) => {
+      const x = bow * t * t + side * width * (1 - t) * (0.75 + t)
+      const z = 0.018 * Math.sin(t * Math.PI)
+      return [
+        rootX + x * Math.cos(angle) - z * Math.sin(angle),
+        height * t,
+        rootZ + x * Math.sin(angle) + z * Math.cos(angle),
+      ]
+    }
+    for (let segment = 0; segment < 4; segment++) {
+      const t = segment / 4,
+        next = (segment + 1) / 4
+      positions.push(
+        ...point(t, -1),
+        ...point(t, 1),
+        ...point(next, -1),
+        ...point(t, 1),
+        ...point(next, 1),
+        ...point(next, -1),
+      )
+    }
   }
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute(
@@ -59,6 +77,13 @@ function createTuftGeometry() {
   geometry.computeVertexNormals()
   geometry.computeBoundingSphere()
   return geometry
+}
+
+/** Patch-scale field shared by all tiers; rejection leaves deliberate quiet gaps. */
+export function meadowDensity(direction: THREE.Vector3) {
+  const { x, y, z } = direction
+  const wave = Math.sin(x * 19 + z * 11) * Math.sin(y * 17 - z * 9)
+  return THREE.MathUtils.smoothstep(wave, -0.45, 0.55)
 }
 
 export function createGrass({
@@ -107,7 +132,7 @@ export function createGrass({
   }
   let accepted = 0
   let candidate = 0
-  while (accepted < safeCount && candidate < safeCount * 8 + 32) {
+  while (accepted < safeCount && candidate < safeCount * 32 + 128) {
     const band = candidate % 8
     const y = -1 + (2 * (band + rng())) / 8
     const radial = Math.sqrt(Math.max(0, 1 - y * y))
@@ -125,6 +150,7 @@ export function createGrass({
     )
       continue
 
+    if (rng() > 0.12 + meadowDensity(direction) * 0.88) continue
     surfaceSampler.sample(direction, surface)
     const frame = createSurfaceFrame(
       center,
@@ -158,10 +184,30 @@ export function createGrass({
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
   mesh.computeBoundingSphere()
   surfaceGeometry.dispose()
+  const rest = new Float32Array(geometry.getAttribute("position").array)
+  const position = geometry.getAttribute("position") as THREE.BufferAttribute
+  position.setUsage(THREE.DynamicDrawUsage)
+  // Geometry deformation is shared by color/depth/normal passes. No shader
+  // override mismatch, per-instance upload, timer or per-frame allocation.
+  geometry.boundingSphere!.radius += 0.035
+  mesh.boundingSphere!.radius += 0.05
+  let lastWind = Number.NaN
   let disposed = false
   return {
     mesh,
     maxFootprint: MAX_FOOTPRINT,
+    update(seconds: number, reducedMotion: boolean) {
+      if (disposed || !Number.isFinite(seconds) || reducedMotion) return
+      const wind =
+        Math.sin(seconds * 1.15) * 0.024 + Math.sin(seconds * 0.47) * 0.008
+      if (wind === lastWind) return
+      lastWind = wind
+      for (let i = 0; i < position.count; i++) {
+        const bend = Math.pow(rest[i * 3 + 1]! / 0.43, 2)
+        position.setX(i, rest[i * 3]! + wind * bend)
+      }
+      position.needsUpdate = true
+    },
     clearings: { spawn: SPAWN_CLEARING_ANGLE, landmark: landmarkClearing },
     dispose() {
       if (disposed) return

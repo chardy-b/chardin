@@ -1,0 +1,180 @@
+{
+  "schema": 1,
+  "id": "wil145-original-meadow-traveler-presentation",
+  "createdAt": "2026-09-08",
+  "creator": "Codex implementation agent, commissioned for Chardin; human ownership confirmation pending",
+  "source": "Original first-principles authoring; local WIL-124/WIL-125 design and supplied Loop 1 review only",
+  "externalInputs": [],
+  "baseCommit": "939b8050f79d7ed023bcf40255765f03417a4ef9",
+  "generationCommand": "pnpm generate:traveler; pnpm exec vitest run tests/unit/engine/traveler-authorship.test.ts tests/unit/engine/meadow-presentation.test.ts",
+  "dependencyVersions": {
+    "three": "0.185.1",
+    "postprocessing": "6.39.4"
+  },
+  "parameters": {
+    "terrainSeed": "0x43484152",
+    "tierInstances": [520, 960, 1520],
+    "clusterTriangles": 48,
+    "tuftSilhouettes": 3,
+    "bladeProfiles": 6,
+    "windMaximumLocalDisplacement": 0.032,
+    "sweptScaledFootprint": 0.28,
+    "walk": {
+      "duration": 0.8,
+      "speed": 1.65,
+      "stance": 0.5
+    },
+    "run": {
+      "duration": 0.52,
+      "speed": 3.3,
+      "stance": 0.34
+    },
+    "legSegmentLength": 0.33,
+    "jointKeySamplesPerClip": 65,
+    "tracksPerClip": 16,
+    "rootTranslationTracks": 0,
+    "travelerRampTextureBytes": 4,
+    "contactShadeTriangles": 32,
+    "addedRenderTargets": 0,
+    "addedPostprocessingPasses": 0,
+    "addedAudioBytes": 0,
+    "clipNames": ["Idle", "Walk", "Run", "Jump"],
+    "artContract": "docs/design/wil145-visual-loop.md"
+  },
+  "modifications": "Rebuilt traveler ring sections, hierarchy and baked IK gait; coherent terrain/meadow, bounded wind, terrain seating/contact shading, speed-coherent pose/camera presentation and compact HUD. Original ramp/aperture/collision/score geometry unchanged. Five existing strict desktop/mobile/tablet visual baselines were regenerated after controller review and recorded in docs/asset-inventory.json.",
+  "rightsStatus": "original; repository license pending",
+  "rightsHolder": "Chardin project owner confirmation pending; agent-assisted authorship does not establish legal ownership",
+  "permissionEvidence": "User WIL-145 request authorizes local implementation; no public distribution or license grant",
+  "permittedUse": "Local authorized repository implementation and review; public release requires owner rights/license confirmation",
+  "attribution": "This record, public/models/README.md and docs/asset-audit.md",
+  "dependencyNoticeLocations": [
+    "node_modules/three/LICENSE",
+    "node_modules/postprocessing/LICENSE.md"
+  ],
+  "review": {
+    "reviewer": null,
+    "date": null,
+    "decision": "Independent originality/quality/rights review and browser visual acceptance pending"
+  },
+  "files": [
+    {
+      "path": "public/models/traveler.glb",
+      "bytes": 147624,
+      "sha256": "fce9de28e7db1b2fda68764582f4b1c5e968f5ee4b525e648e5bc7a80496147d",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "scripts/generate-traveler.mjs",
+      "bytes": 8994,
+      "sha256": "c3eef38a45e497ebd704d5333c20bfc775317c646e25f07746d5b753a2ca90ee",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/assets/manifest.ts",
+      "bytes": 4233,
+      "sha256": "b9dfd8ceab25a1c608eece0844bdd7d27437d7795c37dd9707bdd2485bb3dbb0",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/world/planet.ts",
+      "bytes": 6475,
+      "sha256": "c5182cdc4a7736a05d5a68a57ebe496a4d450ff4eabf82b8ad2df0576c2e946a",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/world/grass.ts",
+      "bytes": 7234,
+      "sha256": "9b193d2322fc5af0f18631917e9585a416d166bbe7b13eed678a7f950cdad782",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/world/skyspace-landmark.ts",
+      "bytes": 11913,
+      "sha256": "f380d3d62cb9b1b6f85e2503825f9618901ae6cae7fa027ce52c4db95ab425a4",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/world/landmark-anchor.ts",
+      "bytes": 931,
+      "sha256": "8a16f842221a953bb2b3a8fb291442c849a1690c266356a5682e03ddf44cacde",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/player/traveler-view.ts",
+      "bytes": 8732,
+      "sha256": "0cec8b138e8fba112d72089667a91b66b2f49f9c97ffa9755d0577720bc4b110",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/player/presentation.ts",
+      "bytes": 3718,
+      "sha256": "b6d96e105c1913baa1954537500580533f5b9f5d7a6641e84dfd9db34ac50ec1",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/player/contact-shadow.ts",
+      "bytes": 2022,
+      "sha256": "ffff9db9681d0fac0eb68f36bbedff89aee573b2623b581d55974c3455964dcd",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/camera/third-person-camera.ts",
+      "bytes": 5967,
+      "sha256": "fddfc69ae6b72cf0f6fd5217ff46def8dbbed96b6122487fec9e14fee4dd88a2",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/three-runtime.ts",
+      "bytes": 25957,
+      "sha256": "b2dfb3f6e6c66ff613b6efb89a2d46f365ae67186c82897251e2fe14cc6afe25",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/debug/test-api.ts",
+      "bytes": 2111,
+      "sha256": "92da8924f713a372ba49a33faf767eac291e46cccca9733910ff23c17939093a",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/render/toon-material.ts",
+      "bytes": 764,
+      "sha256": "8fe45eac6e53bb8a06e93c91fc1576da15dba95a6f2f03490372b6a2c09991c6",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/engine/render/outline-effect.ts",
+      "bytes": 1213,
+      "sha256": "6840fde651463c0a823c33ae3b92ebea66e4cc67d2b56d8bf9d951a04c89fa45",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/components/experience/chardin-experience.tsx",
+      "bytes": 14013,
+      "sha256": "3e2b2ccbb0a6d69ebb5d909f1e2fbc11944883b2076261005082b6b574326d26",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    },
+    {
+      "path": "src/app/globals.css",
+      "bytes": 11111,
+      "sha256": "cadefe206cfdd3b34da5370b9920506acc61bab98e8f252980f50c72255119fc",
+      "source": "Original agent-assisted Chardin WIL-145 art/presentation; docs/design/wil145-provenance.json; first-principles ring sections, foot trajectories, curved blade profiles and authored fields; no external creative inputs",
+      "rights": "original-repository-license-undecided"
+    }
+  ]
+}
