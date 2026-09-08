@@ -20,6 +20,7 @@ export default defineConfig({
     exclude: [
       "node_modules",
       ".next",
+      ".hermes/**",
       "tests/e2e",
       "tests/performance",
       "tests/production",
