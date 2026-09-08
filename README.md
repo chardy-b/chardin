@@ -1,6 +1,6 @@
 # Chardin
 
-Chardin is an original atmospheric browser world. The current foundation opens a tiny spherical grass Planet with a geometric placeholder Traveler and an accessible HTML lifecycle interface around a direct Three.js runtime.
+Chardin is an original atmospheric browser world. The current foundation opens a tiny spherical grass Planet with an original low-poly Traveler and an accessible HTML lifecycle interface around a direct Three.js runtime.
 
 ## Requirements
 
@@ -37,6 +37,8 @@ The health endpoint remains available at `/api/health`.
 
 All visual content remains original, code-generated primitive geometry. External assets require documented redistribution rights.
 
+The third-person traveler is reproducibly generated with `pnpm generate:traveler`. Its node names, clips, coordinate convention, scale, provenance, and license are documented in [`public/models/README.md`](public/models/README.md). The runtime validates this manifest before use and retains a visible primitive fallback during loading or after failure. A future character swap is data-only in `src/engine/assets/manifest.ts` when it preserves that contract.
+
 ## Current limits
 
-WIL-119 adds normalized keyboard, touch, and standard-gamepad controls while preserving deterministic fixed-step movement. Simultaneous keyboard walk and turn inputs are radially normalized, so each axis is approximately 0.707 at full diagonal input rather than matching WIL-118's full-rate values on both axes. Touch joystick groups remain pointer-operated; their semantic names describe them to assistive technology, but non-pointer movement still requires a keyboard or compatible controller. A final GLB Traveler, authored grass, landmarks/skyspace, postprocessing, adaptive quality, audio, analytics, and deployment to `chardin.chezchardin.com` remain deferred.
+WIL-119 adds normalized keyboard, touch, and standard-gamepad controls while preserving deterministic fixed-step movement. Simultaneous keyboard walk and turn inputs are radially normalized, so each axis is approximately 0.707 at full diagonal input rather than matching WIL-118's full-rate values on both axes. Touch joystick groups remain pointer-operated; their semantic names describe them to assistive technology, but non-pointer movement still requires a keyboard or compatible controller. The Traveler's compact procedural clips intentionally omit facial and finger animation; missing optional locomotion mappings fall back to `Idle`. Authored grass, landmarks/skyspace, postprocessing, adaptive quality, audio, analytics, and deployment to `chardin.chezchardin.com` remain deferred.

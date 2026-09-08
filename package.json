@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "generate:traveler": "node scripts/generate-traveler.mjs",
     "start": "next start",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

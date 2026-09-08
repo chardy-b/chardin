@@ -27,6 +27,7 @@ test.describe("Chardin world", () => {
     await page.getByRole("button", { name: "Enter Chardin" }).click()
     await expect(page.locator(".status-line")).toContainText("running")
     const canvas = page.locator("canvas")
+    await expect(canvas).toHaveAttribute("data-traveler-model", "loaded")
     const beforeMovement = await canvas.screenshot()
     await page.keyboard.down("ShiftLeft")
     await page.keyboard.down("KeyW")
@@ -35,6 +36,9 @@ test.describe("Chardin world", () => {
     await page.keyboard.up("ShiftLeft")
     const afterMovement = await canvas.screenshot()
     expect(afterMovement.equals(beforeMovement)).toBe(false)
+    expect(
+      Number(await canvas.getAttribute("data-traveler-distance")),
+    ).toBeGreaterThan(0.5)
 
     await page.keyboard.press("Escape")
     await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible()
@@ -192,5 +196,20 @@ test.describe("Chardin world", () => {
     await expect(
       page.getByRole("link", { name: "Check system health" }),
     ).toHaveAttribute("href", "/api/health")
+  })
+
+  test("retains the visible traveler fallback when the model request fails", async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium")
+    await page.route("**/models/traveler.glb", (route) =>
+      route.fulfill({ status: 503, body: "unavailable" }),
+    )
+    await page.goto("/")
+    await page.getByRole("button", { name: "Enter Chardin" }).click()
+    const canvas = page.locator("canvas")
+    await expect(canvas).toHaveAttribute("data-traveler-model", "fallback")
+    await expect(canvas).toBeVisible()
+    await expect(page.locator(".status-line")).toContainText("running")
   })
 })
