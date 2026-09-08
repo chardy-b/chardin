@@ -1,0 +1,5 @@
+{
+  "schema": 1,
+  "policy": "Every moderate advisory defaults to unresolved and blocks release approval until advisory-specific owner review. Entries keyed by advisory ID require decision, reason, owner, reviewedAt and lockSha256. No real advisory IDs were available in the inherited summary; none are invented here.",
+  "entries": {}
+}

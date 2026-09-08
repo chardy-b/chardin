@@ -1,9 +1,11 @@
 import { readdir, readFile } from "node:fs/promises"
 import { resolve, join } from "node:path"
 
-const summary = JSON.parse(
-  await readFile("coverage/coverage-summary.json", "utf8"),
+const summaryPath = join(
+  process.env.CHARDIN_COVERAGE_DIR ?? "coverage",
+  "coverage-summary.json",
 )
+const summary = JSON.parse(await readFile(summaryPath, "utf8"))
 async function check(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const file = join(dir, entry.name)
@@ -17,6 +19,4 @@ async function check(dir) {
   }
 }
 await check("src/engine")
-process.stdout.write(
-  "Every engine source file appears in coverage/coverage-summary.json\n",
-)
+process.stdout.write(`Every engine source file appears in ${summaryPath}\n`)

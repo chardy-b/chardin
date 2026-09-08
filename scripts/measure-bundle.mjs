@@ -1,16 +1,39 @@
-import { readdir, readFile, mkdir, writeFile } from "node:fs/promises"
-import { join } from "node:path"
+import { readdir } from "node:fs/promises"
+import { existsSync } from "node:fs"
+import { join, resolve } from "node:path"
+import {
+  contained,
+  readRegular,
+  writeJson,
+  safeDirectory,
+} from "./lib/evidence-store.mjs"
 import { gzipSync } from "node:zlib"
 import { identity, requireExactHead, sha256 } from "./lib/evidence.mjs"
 import { summarize } from "./lib/measurement.mjs"
 import { loadPerformanceBudgets } from "./lib/performance-budgets.mjs"
 
+if (!process.env.CHARDIN_EVIDENCE_DIR)
+  throw new Error(
+    "Use pnpm measure:bundle or pnpm evidence bundle to reserve an attempt",
+  )
+const evidenceDir = contained(
+  resolve(".hermes/execution/chardin/release"),
+  process.env.CHARDIN_EVIDENCE_DIR,
+)
+const started = JSON.parse(readRegular(evidenceDir, "started.json"))
+if (
+  started.gate !== "bundle" ||
+  ["result.json", "manifest.json", "manifest.sha256"].some((name) =>
+    existsSync(join(evidenceDir, name)),
+  )
+)
+  throw new Error("Bundle output requires an unfinished bundle attempt")
 const state = identity()
 requireExactHead(state)
 const stamp = JSON.parse(
-  await readFile(".next/chardin-build-evidence.json", "utf8"),
+  readRegular(process.cwd(), ".next/chardin-build-evidence.json"),
 )
-const buildId = (await readFile(".next/BUILD_ID", "utf8")).trim()
+const buildId = readRegular(process.cwd(), ".next/BUILD_ID").toString().trim()
 if (
   stamp.head !== state.head ||
   stamp.tree !== state.tree ||
@@ -21,9 +44,11 @@ if (
     "Build evidence does not match this production build and exact head; run pnpm evidence build",
   )
 async function files(dir) {
+  safeDirectory(dir)
   const paths = []
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name)
+    if (entry.isSymbolicLink()) throw new Error("Symlink in production chunks")
     if (entry.isDirectory()) paths.push(...(await files(path)))
     else if (/\.(js|css)$/.test(path)) paths.push(path)
   }
@@ -31,7 +56,7 @@ async function files(dir) {
 }
 const entries = []
 for (const path of await files(".next/static")) {
-  const bytes = await readFile(path)
+  const bytes = readRegular(process.cwd(), path)
   entries.push({
     path,
     bytes: bytes.length,
@@ -60,12 +85,7 @@ const report = {
   ),
   rawBytes: entries.reduce((sum, entry) => sum + entry.bytes, 0),
 }
-const dir = `.hermes/execution/chardin/release/${state.head}`
-await mkdir(dir, { recursive: true })
-await writeFile(
-  `${dir}/bundle-${Date.now()}.json`,
-  JSON.stringify(report, null, 2) + "\n",
-)
+writeJson(evidenceDir, "bundle.json", report)
 process.stdout.write(JSON.stringify(report, null, 2) + "\n")
 if (
   process.env.CHARDIN_ENFORCE_BUDGETS === "true" &&

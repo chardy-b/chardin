@@ -1,8 +1,12 @@
+import { playwrightEvidence } from "./scripts/lib/playwright-evidence.mjs"
 import { defineConfig } from "@playwright/test"
+
+const evidence = playwrightEvidence("production")
 
 export default defineConfig({
   testDir: "./tests/production",
-  outputDir: "test-results/production",
+  outputDir: evidence.outputDir,
+  reporter: evidence.reporter,
   workers: 1,
   retries: 0,
   use: {

@@ -1,18 +1,18 @@
+import { playwrightEvidence } from "./scripts/lib/playwright-evidence.mjs"
 import { defineConfig, devices } from "@playwright/test"
 import { PERFORMANCE_TIMEOUTS } from "./scripts/lib/performance-workload.mjs"
 
 // Separate from visual tests: no screenshot tracing or retry-selected timings.
+const evidence = playwrightEvidence("performance")
+
 export default defineConfig({
   testDir: "./tests/performance",
   testMatch: "*.spec.ts",
-  outputDir: "test-results/performance",
+  outputDir: evidence.outputDir,
   workers: 1,
   retries: 0,
   globalTimeout: PERFORMANCE_TIMEOUTS.globalMs,
-  reporter: [
-    ["list"],
-    ["json", { outputFile: "test-results/performance-tests.json" }],
-  ],
+  reporter: evidence.reporter,
   use: {
     baseURL: "http://127.0.0.1:3000",
     trace: "off",

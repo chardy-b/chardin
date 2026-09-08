@@ -3,13 +3,13 @@ import { createHash } from "node:crypto"
 
 export const sha256 = (bytes) =>
   createHash("sha256").update(bytes).digest("hex")
-export function identity() {
+export function identity(cwd = process.cwd()) {
   const git = (...args) =>
-    execFileSync("git", args, { encoding: "utf8" }).trim()
+    execFileSync("git", args, { encoding: "utf8", cwd }).trim()
   return {
     head: git("rev-parse", "HEAD"),
     tree: git("rev-parse", "HEAD^{tree}"),
-    dirty: git("status", "--porcelain") !== "",
+    dirty: git("status", "--porcelain=v1", "--untracked-files=all") !== "",
   }
 }
 export function requireExactHead(state) {

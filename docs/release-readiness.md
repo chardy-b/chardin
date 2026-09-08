@@ -17,7 +17,7 @@ Each reviewer records their identity, exact 40-character head SHA, evidence path
 
 ## Gate accounting at the PR head
 
-The quality and security workflows explicitly check out `pull_request.head.sha` (or event SHA outside PRs), rather than the synthetic merge commit. Quality records command, start/end, exit code, head/tree before and after, lockfile hash and log hash per attempt; artifacts upload on success or failure. The wrapper rejects dirty trees, untracked files and a missing/mismatched `CHARDIN_PR_HEAD`. Failed attempts are preserved; exit codes are not masked by pipelines. Build stamps bind the ordinary production bundle and hook-boundary smoke test to head and Next build ID. Browser builds deliberately enable hooks, so production smoke/bundle measurement must precede them.
+The quality and security workflows explicitly check out `pull_request.head.sha` (or event SHA outside PRs), rather than the synthetic merge commit. Quality records command, start/end, actual command exits, head/tree before and after, lockfile hash, and a SHA-256 manifest of every retained artifact per attempt; artifacts upload on success or failure. The wrapper rejects dirty trees, untracked files and a missing/mismatched `CHARDIN_PR_HEAD`. Failed attempts are preserved; exit codes are not masked by pipelines. Build stamps bind the ordinary production bundle and hook-boundary smoke test to head and Next build ID. Browser builds deliberately enable hooks, so production smoke/bundle measurement must precede them.
 
 A green collection command is **not** a passed performance budget. Inspect each report's `status`, and separately run strict budget enforcement after cost budgets have been measured and approved. Coverage exports both detailed JSON and JSON summary; every engine source, including unimported files, must appear. Engine aggregate minimums: 85% lines/statements/functions, 75% branches; global minimums remain 70/70/70/60. CPU tests do not execute GLSL or prove GPU behavior.
 
@@ -38,13 +38,13 @@ Existing TruffleHog action uses a mutable `@main` reference; reproducible supply
 
 ## Parent execution after the implementation agent exits
 
-Use an already reviewed, clean PR checkout. Obtain the PR head from the PR/API independently; **do not set it to local HEAD merely to bypass the check**. A parent authorized to contact GitHub can use `gh pr view <PR> --json headRefOid,baseRefName,state,url`, then verify that local HEAD matches. This session does not create or push that PR. No commands below deploy anything.
+Use a fresh, controlled Linux checkout with Python 3 and the pinned Node/pnpm versions, at the reviewed PR head. Obtain the PR head from the PR/API independently; **do not set it to local HEAD merely to bypass the check**. A parent authorized to contact GitHub can use `gh pr view <PR> --json headRefOid,baseRefName,state,url`, then verify that local HEAD matches. This session does not create or push that PR. No commands below deploy anything.
 
 Run each command separately and preserve its exit status. Install the pinned dependencies and matching Chromium only after the agent exits if they are not already installed. Stop other builds/browsers; all browser configs use one worker and refuse server reuse.
 
 ```sh
 export CHARDIN_PR_HEAD=<verified-full-PR-head-SHA>
-git status --short
+git status --porcelain=v1 --untracked-files=all
 git rev-parse HEAD
 pnpm evidence format
 pnpm evidence lint
@@ -60,7 +60,31 @@ pnpm evidence secrets
 git diff --check
 ```
 
-`pnpm evidence build` explicitly sets `NEXT_PUBLIC_E2E_HOOKS=false`; production smoke starts that existing build. Browser/measurement commands each build their own hook-enabled production server and stop it through Playwright ownership. Logs and bundle reports are in `.hermes/execution/chardin/release/<SHA>/`; browser attachments are in `test-results/browser`, measurements in `test-results/performance`, and coverage in `coverage`. Archive before any rerun. A missing scanner executable is a failed gate, not a clean scan.
+`pnpm evidence build` explicitly sets `NEXT_PUBLIC_E2E_HOOKS=false`; production smoke starts that existing build. Browser/measurement commands each build their own hook-enabled production server. A missing scanner executable is a failed gate, not a clean scan.
+
+### Attempt storage and interruption
+
+Each invocation exclusively creates `.hermes/execution/chardin/release/<SHA>/<gate>-<UUID>/`. Collisions fail; existing directories/files are never reused. Output ancestors and artifact inputs must be contained regular directories/files, without symlinks or hard links. Every attempt reserves and fsyncs `started.json` with `status: incomplete` and empty stdout/stderr logs before spawning a command. Logs stream sanitized complete lines as they arrive (scanner logs contain only detector metadata; incomplete scanner lines are never leaked). Oversized diagnostic lines are explicitly omitted. A command's buffered last line is flushed on handled termination.
+
+After child cleanup, `result.json` records actual exits, signals, timeout/interruption and before/after identity. `manifest.json` inventories all retained files, including started/result records, command logs, browser/performance `playwright/reporter.json`, extracted `playwright/attachments/*`, the attachment index, coverage JSON/HTML and bundle/build-stamp reports. `manifest.sha256` hashes the manifest itself; a manifest cannot contain its own digest. `readAttempt()` in `scripts/lib/evidence-store.mjs` verifies hashes and membership and treats missing completion seals as **incomplete**, even if a partially finalized result says pass. Failed attempts retain their reports and logs. Reruns get new directories automatically; never modify or delete an earlier attempt to obtain a green record.
+
+The package commands `pnpm test:e2e`, `pnpm measure:performance` and `pnpm test:coverage` use the same ownership/storage wrapper for local collection, labeled `exact: false` with actual dirty/head state. `pnpm measure:bundle` still requires exact-head production provenance. Direct Playwright config use also reserves a unique directory and always enables persistent JSON plus attachment extraction in both local and CI modes; its standalone reporter seals the report after all reporters finish. Use the package/wrapper commands for process supervision and command logs. Do not override reporter/output options for evidence collection. Direct development Vitest invocation is not a release-evidence gate.
+
+The Linux supervisor uses Python 3's standard library and a child subreaper, because Playwright can create additional process groups. SIGINT/SIGTERM initiate TERM for the owned group and descendants, followed by bounded KILL escalation; the supervisor adopts/reaps detached or double-forked descendants, including after their leader exits. It also cleans surviving children on ordinary command exit. The wrapper returns 130/143 for interruption and 124 for its timeout, never a cancelling child's zero exit. The supervisor begins KILL at three seconds and the outer group deadline is five seconds. Other operating systems fail before command spawn until equivalent ownership is implemented. General gates have a 15-minute cap; performance retains 780 seconds. These per-gate caps do not guarantee remaining CI-job time; the controller must leave time for finalization/upload.
+
+SIGKILL, power loss or runner destruction cannot finalize the Node record: durable started/partial files remain explicitly incomplete. On Linux, wrapper death also signals the independent supervisor to clean up; killing the supervisor/runner itself still requires the enclosing job/container to destroy all processes. CI uploads the complete attempt tree with `if: always()` and hidden files enabled, but hard job destruction can prevent upload. Export evidence before the 14-day artifact retention expires.
+
+### Clean-tree and ignored-input boundary
+
+Identity checks everywhere use `git status --porcelain=v1 --untracked-files=all`, independent of `status.showUntrackedFiles`. This detects tracked edits and untracked source/routes, including nested files. Git-ignored inputs are deliberately outside this assertion: `.env*`, `node_modules`, `.next`, coverage, reports and local execution records are not authenticated by the source-tree SHA. Next loads `.env*` and freezes public build variables. Release collection therefore requires a fresh controlled checkout, a frozen-lockfile install, reviewed explicit environment values and no unreviewed ignored source/configuration or inherited build/cache output. Review `.gitignore`, `.git/info/exclude` and `core.excludesFile` as part of that controlled environment. Record the environment policy without writing secret values. Generate `.next` only in the ordered build/production/bundle procedure. Never describe clean Git status alone as a hermetic build guarantee.
+
+Exclusive files and hashes prevent accidental overwrite and detect later changes; they are not write-once storage or independent attestation. The checkout owner, local tools and output directory remain trusted. No portable filesystem check protects against a hostile same-UID process renaming ancestors between checks; isolate collection from other writers and archive the sealed result.
+
+### Audit evidence and moderate dispositions
+
+`pnpm evidence audit` runs `pnpm audit --audit-level=high --json --ignore-registry-errors=false` and additionally `pnpm audit --audit-level=info --json --ignore-registry-errors=false`. It retains both commands' stdout/stderr and actual exit records plus `audit-high.json`, `audit-all.json` and `audit-dispositions.json`. The high command's nonzero exit remains a failure even if the detailed command succeeds. High/critical findings in either report fail the gate. The all-severity command's exit 1 is classified as an expected finding exit only when valid, complete advisory details and severity counts account for it; that actual 1 remains visible in the command record. Malformed/filtered reports, inconsistent counts, registry errors, signals and other command failures fail collection. No `|| true` or output pipeline masks an exit.
+
+Each moderate advisory includes its ID, affected installed/range versions, every dependency path, patch/fix data and an explicit disposition. Unreviewed findings default to `unresolved` and continue to block release approval even when the high threshold passes. Reviewers add advisory-specific entries to `docs/audit-dispositions.json`, keyed by advisory ID, with `decision` (`unresolved`, `deferred`, `not-affected` or `remediated`), `reason`, `owner`, `reviewedAt` and `lockSha256`; mismatched lockfile dispositions fail. Rerun at the reviewed head after changes. The inherited two-moderate summary supplies no IDs; this offline repair does not invent them or claim they were resolved.
 
 After baseline review, fill numeric cost limits in `docs/performance-budgets.json`, record reviewer/rationale/reference reports in `docs/performance.md`, and rerun on the final PR head:
 

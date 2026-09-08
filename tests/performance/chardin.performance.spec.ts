@@ -1,5 +1,5 @@
 import { cpus, platform, release, totalmem } from "node:os"
-import { execFileSync } from "node:child_process"
+import { identity } from "../../scripts/lib/evidence.mjs"
 import { expect, test } from "@playwright/test"
 import { installWebGLProbe } from "./webgl-probe"
 import { summarize } from "../../scripts/lib/measurement.mjs"
@@ -61,13 +61,7 @@ test("bounded fixed-workload release measurement", async ({
   } as const)
   const metadata = {
     schema: 2,
-    head: execFileSync("git", ["rev-parse", "HEAD"], {
-      encoding: "utf8",
-    }).trim(),
-    dirty:
-      execFileSync("git", ["status", "--porcelain"], {
-        encoding: "utf8",
-      }).trim() !== "",
+    ...identity(),
     recordedAt: new Date().toISOString(),
     scenario: info.project.name,
     workload,

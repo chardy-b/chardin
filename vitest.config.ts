@@ -29,7 +29,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "json", "json-summary"],
-      reportsDirectory: "coverage",
+      reportsDirectory: process.env.CHARDIN_COVERAGE_DIR ?? "coverage",
       include: [
         "src/engine/**/*.ts",
         "src/components/experience/**/*.tsx",
