@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 
+import type { Quality } from "@/engine/quality/quality-controller"
 import type { Experience, ExperienceState } from "@/engine/contracts"
 import { createExperience } from "@/engine/create-experience"
 import { TouchControls } from "@/components/experience/touch-controls"
@@ -11,6 +12,7 @@ export function ChardinExperience() {
   const touchRef = useRef<HTMLDivElement>(null)
   const experienceRef = useRef<Experience | null>(null)
   const [state, setState] = useState<ExperienceState>({ status: "checking" })
+  const [quality, setQuality] = useState<Quality>("low")
   const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
@@ -20,6 +22,7 @@ export function ChardinExperience() {
       canvas,
       touchRoot: touchRef.current,
       onState: setState,
+      onQuality: setQuality,
     })
     experienceRef.current = experience
     const onVisibilityChange = () => {
@@ -59,6 +62,21 @@ export function ChardinExperience() {
           <p className="brand-note">A small world, still becoming</p>
         </div>
       </header>
+      <label className="quality-control">
+        <span>Visual quality</span>
+        <select
+          value={quality}
+          onChange={(event) => {
+            const next = event.target.value as Quality
+            setQuality(next)
+            experienceRef.current?.setQuality(next)
+          }}
+        >
+          <option value="low">Low</option>
+          <option value="balanced">Balanced</option>
+          <option value="high">High</option>
+        </select>
+      </label>
       <div className="experience-actions" aria-label="Experience controls">
         {state.status === "running" && (
           <button type="button" onClick={() => experienceRef.current?.pause()}>
@@ -87,7 +105,10 @@ export function ChardinExperience() {
       )}
       <div className="lifecycle" aria-live="polite">
         {(state.status === "checking" || state.status === "loading") && (
-          <p>Preparing the world…</p>
+          <section className="pause-panel" role="status">
+            <p>Preparing the world…</p>
+            <progress aria-label="Preparing the world" />
+          </section>
         )}
         {state.status === "ready" && (
           <section className="welcome-panel">
@@ -103,15 +124,36 @@ export function ChardinExperience() {
             </button>
           </section>
         )}
-        {state.status === "paused" && (
+        {(state.status === "paused" || state.status === "recovered") && (
           <section className="pause-panel">
             <p className="eyebrow">The world is resting</p>
-            <h2>Paused</h2>
+            <h2>
+              {state.status === "recovered" ? "Graphics recovered" : "Paused"}
+            </h2>
+            {state.status === "recovered" && (
+              <p>The world is ready again. Resume when you are ready.</p>
+            )}
             <div className="pause-actions">
               <button type="button" className="enter-button" onClick={resume}>
                 Resume
               </button>
             </div>
+          </section>
+        )}
+        {state.status === "context-lost" && (
+          <section className="failure-panel" role="alert">
+            <h1>Graphics interrupted</h1>
+            <p>
+              Play is paused while the browser restores graphics. If it cannot
+              recover, retry to rebuild the world.
+            </p>
+            <button
+              className="enter-button"
+              type="button"
+              onClick={() => experienceRef.current?.retry()}
+            >
+              Retry
+            </button>
           </section>
         )}
         {failure && (
@@ -125,13 +167,20 @@ export function ChardinExperience() {
             <p>
               {failure === "webgl2"
                 ? "This browser or device cannot provide WebGL2. You can still read about the project and check system health."
-                : "The world could not start safely. Reload the page to try again."}
+                : "The world stopped safely. Retry to rebuild it, then choose Enter Chardin to play."}
             </p>
+            <button
+              className="enter-button"
+              type="button"
+              onClick={() => experienceRef.current?.retry()}
+            >
+              Retry
+            </button>{" "}
             <a href="/api/health">Check system health</a>
           </section>
         )}
       </div>
-      <p className="status-line">
+      <p className="status-line" role="status">
         <span
           className={`status-dot status-${state.status}`}
           aria-hidden="true"

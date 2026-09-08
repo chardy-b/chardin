@@ -67,3 +67,26 @@ describe("ChardinExperience", () => {
     expect(screen.getByLabelText("Movement guide")).toBeInTheDocument()
   })
 })
+
+it("provides quality selection, loading progress and actionable recovery", async () => {
+  const user = userEvent.setup()
+  render(<ChardinExperience />)
+  expect(
+    screen.getByRole("combobox", { name: "Visual quality" }),
+  ).toBeInTheDocument()
+  act(() => publishState({ status: "loading", progress: 0 }))
+  expect(
+    screen.getByRole("progressbar", { name: "Preparing the world" }),
+  ).toBeInTheDocument()
+  expect(
+    screen.queryByRole("button", { name: "Enter Chardin" }),
+  ).not.toBeInTheDocument()
+  act(() => publishState({ status: "context-lost" }))
+  expect(
+    screen.getByRole("heading", { name: "Graphics interrupted" }),
+  ).toBeInTheDocument()
+  expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument()
+  act(() => publishState({ status: "recovered" }))
+  await user.click(screen.getByRole("button", { name: "Resume" }))
+  expect(controls.resume).toHaveBeenCalledOnce()
+})

@@ -1,4 +1,5 @@
 import * as THREE from "three"
+import { createToonMaterial } from "@/engine/render/toon-material"
 
 import { createSurfaceFrame } from "@/engine/world/surface-frame"
 import {
@@ -83,12 +84,12 @@ export function createGrass({
       ? 0
       : settings.grassCount
   const geometry = createTuftGeometry()
-  const material = new THREE.MeshStandardMaterial({
-    roughness: 0.92,
+  const material = createToonMaterial({
     side: THREE.DoubleSide,
   })
   const mesh = new THREE.InstancedMesh(geometry, material, safeCount)
   mesh.name = "Clustered meadow grass"
+  mesh.receiveShadow = true
   const rng = random(seed | 0)
   const object = new THREE.Object3D()
   const landmarkClearing = createLandmarkAnchor(

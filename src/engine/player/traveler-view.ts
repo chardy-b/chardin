@@ -10,6 +10,8 @@ import {
 } from "@/engine/assets/manifest"
 import type { TravelerState } from "@/engine/contracts"
 
+export const TRAVELER_LOAD_TIMEOUT_MS = 8_000
+
 export interface TravelerView {
   object: THREE.Group
   ready: Promise<void>
@@ -64,39 +66,61 @@ export function createTravelerView(
   let activeAction: THREE.AnimationAction | null = null
   let disposed = false
 
-  const ready = (
-    options.load ??
-    ((signal) => loadCharacter(travelerManifest, undefined, signal))
-  )(controller.signal)
-    .then((loaded) => {
-      if (disposed) {
-        loaded.dispose()
-        return
-      }
-      asset = loaded
-      mixer = new THREE.AnimationMixer(loaded.root)
-      object.remove(fallback)
-      disposeFallback(fallback)
-      object.add(loaded.root)
-      options.onStatus?.("loaded")
-    })
-    .catch((error: unknown) => {
-      if (
-        !disposed &&
-        !(error instanceof DOMException && error.name === "AbortError")
-      ) {
-        console.warn("Traveler model unavailable; retaining fallback", error)
-        options.onStatus?.("fallback")
-      }
-    })
+  let settled = false
+  let resolveReady!: () => void
+  const ready = new Promise<void>((resolve) => {
+    resolveReady = resolve
+  })
+  const settle = (status?: "loaded" | "fallback") => {
+    if (settled) return
+    settled = true
+    clearTimeout(deadline)
+    resolveReady()
+    if (!disposed && status) options.onStatus?.(status)
+  }
+  // Readiness is independent of whether fetch, body decoding, or a transport
+  // honours abort. A late model is disposed rather than replacing live fallback.
+  const deadline = setTimeout(() => {
+    settle("fallback")
+    controller.abort()
+  }, TRAVELER_LOAD_TIMEOUT_MS)
+  const failedLoad = (error: unknown) => {
+    if (settled || disposed) return
+    console.warn("Traveler model unavailable; retaining fallback", error)
+    settle("fallback")
+  }
+  try {
+    const loading = (
+      options.load ??
+      ((signal) => loadCharacter(travelerManifest, undefined, signal))
+    )(controller.signal)
+    void loading
+      .then((loaded) => {
+        if (disposed || settled) {
+          loaded.dispose()
+          return
+        }
+        asset = loaded
+        mixer = new THREE.AnimationMixer(loaded.root)
+        object.remove(fallback)
+        disposeFallback(fallback)
+        object.add(loaded.root)
+        settle("loaded")
+      })
+      .catch(failedLoad)
+  } catch (error) {
+    failedLoad(error)
+  }
 
-  const transition = (next: CharacterAnimation) => {
+  let frozen = false
+  const transition = (next: CharacterAnimation, instant: boolean) => {
     if (!asset || !mixer) return
     const resolved = asset.clips[next] ? next : "idle"
-    if (active === resolved) return
+    if (active === resolved && !(instant && !frozen)) return
     const clip = asset.clips[resolved] ?? asset.clips.idle
     const action = mixer.clipAction(clip)
-    action.reset()
+    if (instant) mixer.stopAllAction()
+    action.reset().setEffectiveWeight(1)
     if (resolved === "jump") {
       action.setLoop(THREE.LoopOnce, 1)
       action.clampWhenFinished = true
@@ -105,7 +129,7 @@ export function createTravelerView(
       action.clampWhenFinished = false
     }
     action.play()
-    if (activeAction && activeAction !== action)
+    if (!instant && activeAction && activeAction !== action)
       activeAction.crossFadeTo(action, 0.16, true)
     activeAction = action
     active = resolved
@@ -116,13 +140,19 @@ export function createTravelerView(
     ready,
     update(state, fixedSeconds) {
       if (disposed) return
-      transition(state.locomotion === "airborne" ? "jump" : state.locomotion)
+      const instant = fixedSeconds === 0
+      transition(
+        state.locomotion === "airborne" ? "jump" : state.locomotion,
+        instant,
+      )
+      frozen = instant
       mixer?.update(fixedSeconds)
     },
     activeAnimation: () => active,
     dispose() {
       if (disposed) return
       disposed = true
+      settle()
       controller.abort()
       mixer?.stopAllAction()
       asset?.dispose()

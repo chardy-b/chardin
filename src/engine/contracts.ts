@@ -1,4 +1,5 @@
 import type * as THREE from "three"
+import type { Quality } from "@/engine/quality/quality-controller"
 
 export type ExperienceState =
   | { status: "checking" }
@@ -6,6 +7,8 @@ export type ExperienceState =
   | { status: "ready" }
   | { status: "running" }
   | { status: "paused" }
+  | { status: "context-lost" }
+  | { status: "recovered" }
   | { status: "failed"; code: "webgl2" | "runtime" }
   | { status: "disposed" }
 
@@ -32,7 +35,17 @@ export interface SurfaceFrame {
   right: THREE.Vector3
 }
 
+export interface RuntimeOptions {
+  touchRoot?: HTMLElement | null
+  onPauseRequested?: () => void
+  onFatal?: () => void
+  onQuality?: (quality: Quality) => void
+  quality?: Quality
+}
+
 export interface ExperienceRuntime {
+  ready?: Promise<void>
+  setQuality?(quality: Quality): void
   start(): void
   pause(): void
   resume(): void
@@ -40,6 +53,8 @@ export interface ExperienceRuntime {
 }
 
 export interface Experience {
+  retry(): void
+  setQuality(quality: Quality): void
   start(): boolean
   pause(): void
   resume(): void

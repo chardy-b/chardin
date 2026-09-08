@@ -25,6 +25,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      postprocessing:
+        specifier: 6.39.4
+        version: 6.39.4(three@0.185.1)
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -106,6 +109,14 @@ importers:
         version: 4.1.11(@types/node@20.19.43)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1)(vite@8.2.2(@types/node@20.19.43)(jiti@2.7.0))
 
 packages:
+  postprocessing@6.39.4:
+    resolution:
+      {
+        integrity: sha512-oAS/PjAbc/xT3OzjUrGsorJ4J064XwhVD2t0OwKLP/E8QwDMUJ0oOv6ZI1SYMtLchv4g0ySEx+JcLy92+48vlA==,
+      }
+    peerDependencies:
+      three: ">= 0.168.0 < 0.186.0"
+
   "@adobe/css-tools@4.5.0":
     resolution:
       {
@@ -6068,6 +6079,10 @@ packages:
       }
 
 snapshots:
+  postprocessing@6.39.4(three@0.185.1):
+    dependencies:
+      three: 0.185.1
+
   "@adobe/css-tools@4.5.0": {}
 
   "@alloc/quick-lru@5.2.0": {}
